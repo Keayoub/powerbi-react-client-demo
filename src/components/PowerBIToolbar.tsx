@@ -66,6 +66,12 @@ export const PowerBIToolbar: React.FC<PowerBIToolbarProps> = ({
 
   // Handle errors with retry mechanism
   const handleError = async (error: any, context: string) => {
+    // Add null/undefined checks
+    if (!error) {
+      console.warn(`${context}: No error object provided`);
+      return;
+    }
+    
     const parsedError = powerBIErrorHandler.parseError(error, reportId);
     setLastError(parsedError);
     
@@ -192,7 +198,10 @@ export const PowerBIToolbar: React.FC<PowerBIToolbarProps> = ({
   };
 
   const handleRefresh = async () => {
-    if (!report) return;
+    if (!report) {
+      console.warn('Cannot refresh: report instance not available');
+      return;
+    }
 
     try {
       setIsLoading(true);
@@ -207,7 +216,14 @@ export const PowerBIToolbar: React.FC<PowerBIToolbarProps> = ({
       setTimeout(() => loadBookmarks(), 1000);
     } catch (error) {
       console.error('Refresh error:', error);
-      await handleError(error, 'Refresh Report');
+      
+      // Ensure error is properly defined before handling
+      if (error) {
+        await handleError(error, 'Refresh Report');
+      } else {
+        console.warn('Refresh failed with undefined error');
+        onError?.('Failed to refresh report. Please try again.');
+      }
       
       // If refresh fails, try a full reload as fallback
       if (onReportReload) {

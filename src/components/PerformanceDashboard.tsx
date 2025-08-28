@@ -106,6 +106,20 @@ export const PerformanceDashboard: React.FC = () => {
     const powerBIEmbeds = document.querySelectorAll('iframe[src*="powerbi"]');
     const powerBIInstances = (window as any).powerBIInstances || [];
     
+    // Check singleton status from PowerBI service
+    const powerBIService = (window as any).PowerBIService;
+    const isSingletonMode = powerBIService?.isSingletonEnabled?.() || false;
+    
+    // Calculate actual service instance count
+    let actualServiceCount = 0;
+    if (isSingletonMode) {
+      // In singleton mode, there should be only 1 service instance regardless of embeds
+      actualServiceCount = powerBIEmbeds.length > 0 ? 1 : 0;
+    } else {
+      // In individual mode, each embed should have its own service
+      actualServiceCount = Math.max(powerBIInstances.length, powerBIEmbeds.length);
+    }
+    
     // Get real page performance metrics
     const navigationTiming = performance.getEntriesByType('navigation')[0] as PerformanceNavigationTiming;
     const resourceEntries = performance.getEntriesByType('resource');
@@ -114,7 +128,7 @@ export const PerformanceDashboard: React.FC = () => {
     const realMetrics = {
       reportCount: powerBIEmbeds.length,
       frameCount: powerBIEmbeds.length,
-      serviceInstanceCount: powerBIInstances.length || 1,
+      serviceInstanceCount: actualServiceCount,
       memoryUsage: memory ? memory.usedJSHeapSize / 1024 / 1024 : 0,
       apiCallCount: resourceEntries.filter(entry => 
         entry.name.includes('powerbi') || entry.name.includes('api')
@@ -257,6 +271,16 @@ export const PerformanceDashboard: React.FC = () => {
         <div className="metric-item">
           <span className="metric-label">Services:</span>
           <span className="metric-value">{metrics.serviceInstanceCount}</span>
+        </div>
+        <div className="metric-item">
+          <span className="metric-label">Mode:</span>
+          <span className="metric-value">
+            {(() => {
+              const powerBIService = (window as any).PowerBIService;
+              const isSingleton = powerBIService?.isSingletonEnabled?.() || false;
+              return isSingleton ? '🟢 Singleton' : '🔴 Individual';
+            })()}
+          </span>
         </div>
         <div className="metric-item">
           <span className="metric-label">Memory:</span>

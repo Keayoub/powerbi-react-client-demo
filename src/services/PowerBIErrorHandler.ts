@@ -56,8 +56,20 @@ export class PowerBIErrorHandler {
    * Parse PowerBI error from event
    */
   parseError(event: any, reportId?: string): PowerBIError {
-    const errorCode = event?.detail?.errorCode || event?.errorCode || 'UNKNOWN';
-    const errorMessage = event?.detail?.message || event?.message || 'Unknown PowerBI error';
+    // Handle null/undefined events
+    if (!event) {
+      return {
+        code: 'NULL_ERROR',
+        message: 'No error information provided',
+        reportId: reportId || 'unknown',
+        timestamp: new Date(),
+        retryable: false,
+        severity: 'low'
+      };
+    }
+    
+    const errorCode = event?.detail?.errorCode || event?.errorCode || event?.code || 'UNKNOWN';
+    const errorMessage = event?.detail?.message || event?.message || event?.toString?.() || 'Unknown PowerBI error';
     
     let severity: 'low' | 'medium' | 'high' | 'critical' = 'medium';
     let retryable = false;
@@ -94,14 +106,18 @@ export class PowerBIErrorHandler {
    * Get user-friendly error message
    */
   getUserFriendlyMessage(error: PowerBIError): string {
+    if (!error || !error.message) {
+      return 'An unknown error occurred. Please try again.';
+    }
+    
     switch (true) {
-      case error.code.includes('TokenExpired') || error.message.includes('token'):
+      case error.code.includes('TokenExpired') || (error.message && error.message.includes('token')):
         return 'Your session has expired. Please refresh the page to continue.';
       
       case error.code.includes('QueryUserError'):
         return 'Power BI query error - this may be due to token expiration, rate limiting, or permissions issue. Try refreshing the page or reducing concurrent reports.';
       
-      case error.code.includes('RateLimited') || error.message.includes('rate'):
+      case error.code.includes('RateLimited') || (error.message && error.message.includes('rate')):
         return 'Too many requests. Please wait a moment before trying again.';
       
       case error.code.includes('NotFound'):
@@ -115,6 +131,9 @@ export class PowerBIErrorHandler {
       
       case error.code.includes('Timeout'):
         return 'Request timed out. Please try again.';
+      
+      case error.code === 'NULL_ERROR':
+        return 'A system error occurred. Please refresh the page.';
       
       default:
         return error.message || 'An error occurred while loading the Power BI report.';
