@@ -639,5 +639,8 @@ class PowerBIService {
 // Export de l'instance singleton
 export const powerBIService = PowerBIService.getInstance();
 
+// Make service available globally for debugging and monitoring
+(window as any).PowerBIService = powerBIService;
+
 // Export du type pour TypeScript
 export type { PowerBIServiceConfig, EmbedInstance };

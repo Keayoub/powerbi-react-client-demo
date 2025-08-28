@@ -116,6 +116,16 @@ export const EmbeddedPowerBIContainer: React.FC<
       } else {
         serviceRef.current = powerBIService.createNewServiceInstance();
         console.log("🔧 Enhanced PowerBI service initialized using individual instance");
+        
+        // Track individual instances globally for metrics
+        if (!(window as any).powerBIIndividualInstances) {
+          (window as any).powerBIIndividualInstances = [];
+        }
+        (window as any).powerBIIndividualInstances.push({
+          instanceId: instanceId.current,
+          reportId,
+          service: serviceRef.current
+        });
       }
     }
   }, []);
@@ -166,6 +176,12 @@ export const EmbeddedPowerBIContainer: React.FC<
       // Unregister from singleton service (only in singleton mode)
       if (powerBIService.isSingletonModeEnabled()) {
         powerBIService.unregisterEmbedInstance(instanceId.current);
+      } else {
+        // Remove from individual instances tracking if not singleton
+        const individualInstances = (window as any).powerBIIndividualInstances || [];
+        const newInstances = individualInstances.filter((inst: any) => inst.instanceId !== instanceId.current);
+        (window as any).powerBIIndividualInstances = newInstances;
+        console.log("🔧 Removed from individual instances tracking:", instanceId.current);
       }
 
       if (reportRef.current) {

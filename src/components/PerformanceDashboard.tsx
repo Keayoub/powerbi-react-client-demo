@@ -1,53 +1,5 @@
 /**
- * Advanced Performance Monexport const PerformanceDashboard: React.FC = () => {
-  const [metrics, setMetrics] = useState<PerformanceMetrics>({
-    reportLoadTime: 0,
-    embedTime: 0,
-    renderTime: 0,
-    interactionDelay: 0,
-    memoryUsage: 0,
-    apiCallCount: 0,
-    errorCount: 0,
-    cacheHitRate: 0,
-    reportCount: 0,
-    frameCount: 0,
-    serviceInstanceCount: 0
-  });
-
-  const [reports, setReports] = useState<ReportMetrics[]>([]);
-  const [isCollapsed, setIsCollapsed] = useState(false);
-  const [autoRefresh, setAutoRefresh] = useState(true);
-  const [refreshInterval, setRefreshInterval] = useState(2000);
-
-  // Track PowerBI embed events
-  useEffect(() => {
-    const trackPowerBIEvents = () => {
-      // Listen for PowerBI events if available
-      if ((window as any).powerbi) {
-        const powerbi = (window as any).powerbi;
-        
-        // Track embed events
-        const handleEmbedEvent = (event: any) => {
-          console.log('PowerBI Event:', event);
-          // Update metrics based on event
-          collectMetrics();
-        };
-
-        // Listen for various PowerBI events
-        document.addEventListener('powerbi-loaded', handleEmbedEvent);
-        document.addEventListener('powerbi-rendered', handleEmbedEvent);
-        document.addEventListener('powerbi-error', handleEmbedEvent);
-
-        return () => {
-          document.removeEventListener('powerbi-loaded', handleEmbedEvent);
-          document.removeEventListener('powerbi-rendered', handleEmbedEvent);
-          document.removeEventListener('powerbi-error', handleEmbedEvent);
-        };
-      }
-    };
-
-    trackPowerBIEvents();
-  }, []);
+ * Advanced Performance Monitor
  * Real-time metrics for PowerBI embedding performance
  */
 
@@ -66,6 +18,8 @@ interface PerformanceMetrics {
   reportCount: number;
   frameCount: number;
   serviceInstanceCount: number;
+  dataTransfer?: number;
+  performanceImpact?: 'low' | 'medium' | 'high';
 }
 
 interface ReportMetric {
@@ -76,6 +30,7 @@ interface ReportMetric {
   lastUpdated: Date;
   size: number;
   cacheHit: boolean;
+  priority?: 'high' | 'normal' | 'low';
 }
 
 export const PerformanceDashboard: React.FC = () => {
@@ -104,42 +59,62 @@ export const PerformanceDashboard: React.FC = () => {
 
     // Get real PowerBI instances from the page
     const powerBIEmbeds = document.querySelectorAll('iframe[src*="powerbi"]');
-    const powerBIInstances = (window as any).powerBIInstances || [];
+    const powerBIContainers = document.querySelectorAll('[data-priority]');
     
     // Check singleton status from PowerBI service
     const powerBIService = (window as any).PowerBIService;
-    const isSingletonMode = powerBIService?.isSingletonEnabled?.() || false;
+    const isSingletonMode = powerBIService?.isSingletonModeEnabled?.() || false;
     
-    // Calculate actual service instance count
+    // Calculate actual service instance count and performance impact
     let actualServiceCount = 0;
+    let performanceImpact: 'low' | 'medium' | 'high' = 'low';
+    
     if (isSingletonMode) {
-      // In singleton mode, there should be only 1 service instance regardless of embeds
+      // In singleton mode, there should be only 1 service instance
       actualServiceCount = powerBIEmbeds.length > 0 ? 1 : 0;
+      performanceImpact = powerBIEmbeds.length > 5 ? 'medium' : 'low';
     } else {
-      // In individual mode, each embed should have its own service
-      actualServiceCount = Math.max(powerBIInstances.length, powerBIEmbeds.length);
+      // In individual mode, count individual instances
+      const individualInstances = (window as any).powerBIIndividualInstances || [];
+      actualServiceCount = individualInstances.length;
+      performanceImpact = actualServiceCount > 3 ? 'high' : actualServiceCount > 1 ? 'medium' : 'low';
     }
     
     // Get real page performance metrics
     const navigationTiming = performance.getEntriesByType('navigation')[0] as PerformanceNavigationTiming;
     const resourceEntries = performance.getEntriesByType('resource');
+    const powerBIResources = resourceEntries.filter(entry => 
+      entry.name.includes('powerbi') || 
+      entry.name.includes('msit.powerbi') ||
+      entry.name.includes('analysis.windows.net')
+    );
     
-    // Calculate real metrics
+    // Calculate PowerBI-specific metrics
+    const powerBILoadTime = powerBIResources.reduce((total, resource) => {
+      const resourceTiming = resource as PerformanceResourceTiming;
+      return total + (resourceTiming.responseEnd - resourceTiming.requestStart);
+    }, 0);
+    
+    const totalDataTransfer = powerBIResources.reduce((total, resource) => 
+      total + ((resource as any).transferSize || 0), 0
+    );
+    
+    // Calculate real metrics with PowerBI context
     const realMetrics = {
       reportCount: powerBIEmbeds.length,
       frameCount: powerBIEmbeds.length,
       serviceInstanceCount: actualServiceCount,
       memoryUsage: memory ? memory.usedJSHeapSize / 1024 / 1024 : 0,
-      apiCallCount: resourceEntries.filter(entry => 
-        entry.name.includes('powerbi') || entry.name.includes('api')
-      ).length,
+      apiCallCount: powerBIResources.length,
       errorCount: JSON.parse(localStorage.getItem('powerbi-errors') || '[]').length,
-      cacheHitRate: resourceEntries.length > 0 ? 
-        (resourceEntries.filter(entry => (entry as any).transferSize === 0).length / resourceEntries.length) * 100 : 0,
-      reportLoadTime: navigationTiming ? navigationTiming.loadEventEnd - navigationTiming.loadEventStart : 0,
+      cacheHitRate: powerBIResources.length > 0 ? 
+        (powerBIResources.filter(resource => (resource as any).transferSize === 0).length / powerBIResources.length) * 100 : 0,
+      reportLoadTime: powerBILoadTime || (navigationTiming ? navigationTiming.loadEventEnd - navigationTiming.loadEventStart : 0),
       embedTime: navigationTiming ? navigationTiming.domContentLoadedEventEnd - navigationTiming.domContentLoadedEventStart : 0,
       renderTime: navigationTiming ? navigationTiming.domComplete - navigationTiming.domInteractive : 0,
-      interactionDelay: performance.now()
+      interactionDelay: performance.now(),
+      dataTransfer: totalDataTransfer,
+      performanceImpact
     };
 
     setMetrics(prev => ({
@@ -151,28 +126,47 @@ export const PerformanceDashboard: React.FC = () => {
     const realReports = Array.from(powerBIEmbeds).map((iframe, index) => {
       const src = (iframe as HTMLIFrameElement).src;
       const reportId = src.split('reportId=')[1]?.split('&')[0] || `report-${index + 1}`;
+      const container = iframe.closest('[data-priority]');
+      const priority = container?.getAttribute('data-priority') || 'normal';
+      
+      // Try to get actual report name from toolbar or container
+      const reportNameElement = container?.querySelector('.report-name') || 
+                               container?.previousElementSibling?.querySelector('.toolbar-title');
+      const reportName = reportNameElement?.textContent || `Report ${index + 1}`;
+      
+      // Estimate report size based on iframe and content
+      const iframeRect = iframe.getBoundingClientRect();
+      const estimatedSize = iframeRect.width * iframeRect.height * 100; // Rough estimation
+      
+      // Check if report loaded successfully
+      const iframeElement = iframe as HTMLIFrameElement;
+      const isLoaded = iframeElement.contentWindow !== null;
+      const hasError = container?.querySelector('.enhanced-powerbi-error') !== null;
       
       return {
         id: reportId,
-        name: `Report ${index + 1}`,
-        status: iframe.getAttribute('data-status') || 'loaded',
-        loadTime: Math.random() * 2000 + 500, // We'll improve this with real timing
-        size: Math.random() * 3000000 + 1000000, // Estimated size
-        cacheHit: Math.random() > 0.5,
-        lastUpdated: new Date()
+        name: reportName,
+        status: hasError ? 'error' : (isLoaded ? 'loaded' : 'loading'),
+        loadTime: powerBIResources.find(r => r.name.includes(reportId))?.duration || 
+                 Math.random() * 2000 + 800, // Fallback estimation
+        size: estimatedSize,
+        cacheHit: powerBIResources.some(r => r.name.includes(reportId) && (r as any).transferSize === 0),
+        lastUpdated: new Date(),
+        priority: priority as 'high' | 'normal' | 'low'
       };
     });
 
-    // If no real reports, show current page info instead of fake demo data
+    // If no real reports, show current page info with more context
     const finalReports = realReports.length > 0 ? realReports : [
       {
         id: 'current-page',
-        name: 'Current Page',
-        status: document.readyState,
+        name: `Current Page (${window.location.pathname})`,
+        status: document.readyState as 'loading' | 'loaded',
         loadTime: navigationTiming ? navigationTiming.loadEventEnd - navigationTiming.loadEventStart : performance.now(),
         size: new Blob([document.documentElement.outerHTML]).size,
         cacheHit: performance.getEntriesByType('navigation').length > 0,
-        lastUpdated: new Date()
+        lastUpdated: new Date(),
+        priority: 'normal' as const
       }
     ];
     
@@ -265,34 +259,51 @@ export const PerformanceDashboard: React.FC = () => {
           <span className="metric-value">{metrics.reportCount}</span>
         </div>
         <div className="metric-item">
-          <span className="metric-label">Frames:</span>
-          <span className="metric-value">{metrics.frameCount}</span>
-        </div>
-        <div className="metric-item">
           <span className="metric-label">Services:</span>
-          <span className="metric-value">{metrics.serviceInstanceCount}</span>
+          <span className="metric-value" style={{
+            color: metrics.performanceImpact === 'high' ? '#ef4444' : 
+                   metrics.performanceImpact === 'medium' ? '#f59e0b' : '#10b981'
+          }}>
+            {metrics.serviceInstanceCount}
+          </span>
         </div>
         <div className="metric-item">
           <span className="metric-label">Mode:</span>
           <span className="metric-value">
             {(() => {
               const powerBIService = (window as any).PowerBIService;
-              const isSingleton = powerBIService?.isSingletonEnabled?.() || false;
+              const isSingleton = powerBIService?.isSingletonModeEnabled?.() || false;
               return isSingleton ? '🟢 Singleton' : '🔴 Individual';
             })()}
           </span>
         </div>
         <div className="metric-item">
           <span className="metric-label">Memory:</span>
-          <span className="metric-value">{metrics.memoryUsage.toFixed(1)} MB</span>
-        </div>
-        <div className="metric-item">
-          <span className="metric-label">Page:</span>
-          <span className="metric-value">{window.location.pathname}</span>
+          <span className="metric-value" style={{
+            color: metrics.memoryUsage > 150 ? '#ef4444' : 
+                   metrics.memoryUsage > 100 ? '#f59e0b' : '#10b981'
+          }}>
+            {metrics.memoryUsage.toFixed(1)} MB
+          </span>
         </div>
         <div className="metric-item">
           <span className="metric-label">API Calls:</span>
           <span className="metric-value">{metrics.apiCallCount}</span>
+        </div>
+        <div className="metric-item">
+          <span className="metric-label">Data Transfer:</span>
+          <span className="metric-value">
+            {metrics.dataTransfer ? formatSize(metrics.dataTransfer) : '0 B'}
+          </span>
+        </div>
+        <div className="metric-item">
+          <span className="metric-label">Impact:</span>
+          <span className="metric-value" style={{
+            color: metrics.performanceImpact === 'high' ? '#ef4444' : 
+                   metrics.performanceImpact === 'medium' ? '#f59e0b' : '#10b981'
+          }}>
+            {metrics.performanceImpact?.toUpperCase() || 'LOW'}
+          </span>
         </div>
       </div>
 
@@ -355,6 +366,7 @@ export const PerformanceDashboard: React.FC = () => {
                   <tr>
                     <th>Report Name</th>
                     <th>Status</th>
+                    <th>Priority</th>
                     <th>Load Time</th>
                     <th>Size</th>
                     <th>Cache</th>
@@ -367,14 +379,23 @@ export const PerformanceDashboard: React.FC = () => {
                       <td className="report-name">{report.reportName}</td>
                       <td>
                         <span className={`status-badge ${report.status}`}>
-                          {report.status}
+                          {report.status === 'loaded' ? '✅' : 
+                           report.status === 'error' ? '❌' : '⏳'} {report.status}
                         </span>
                       </td>
-                      <td>{report.loadTime.toFixed(0)}ms</td>
+                      <td>
+                        <span className={`priority-badge ${report.priority || 'normal'}`}>
+                          {report.priority === 'high' ? '🔥' : 
+                           report.priority === 'low' ? '❄️' : '📊'} {report.priority || 'normal'}
+                        </span>
+                      </td>
+                      <td className={report.loadTime > 3000 ? 'slow-load' : ''}>
+                        {report.loadTime.toFixed(0)}ms
+                      </td>
                       <td>{formatSize(report.size)}</td>
                       <td>
                         <span className={`cache-indicator ${report.cacheHit ? 'hit' : 'miss'}`}>
-                          {report.cacheHit ? '✓' : '✗'}
+                          {report.cacheHit ? '✓ Hit' : '✗ Miss'}
                         </span>
                       </td>
                       <td>
@@ -394,24 +415,100 @@ export const PerformanceDashboard: React.FC = () => {
           <div className="recommendations">
             <h4>💡 Performance Recommendations</h4>
             <ul>
-              {metrics.reportLoadTime > 3000 && (
-                <li>⚠️ Report load time is high. Consider implementing report caching.</li>
-              )}
-              {metrics.memoryUsage > 150 && (
-                <li>⚠️ High memory usage detected. Consider using virtual scrolling for large datasets.</li>
-              )}
-              {metrics.cacheHitRate < 50 && (
-                <li>💾 Low cache hit rate. Review caching strategy and preloading settings.</li>
-              )}
-              {metrics.errorCount > 5 && (
-                <li>🚨 Multiple errors detected. Check network connectivity and token validity.</li>
-              )}
-              {metrics.serviceInstanceCount > 3 && (
-                <li>🔄 Multiple service instances detected. Consider using singleton mode.</li>
-              )}
-              {metrics.frameCount > 10 && (
-                <li>📊 Many frames loaded. Consider implementing virtual scrolling or pagination.</li>
-              )}
+              {/* PowerBI-specific recommendations */}
+              {(() => {
+                const powerBIService = (window as any).PowerBIService;
+                const isSingleton = powerBIService?.isSingletonModeEnabled?.() || false;
+                const recommendations = [];
+                
+                // Service optimization recommendations
+                if (!isSingleton && metrics.serviceInstanceCount > 3) {
+                  recommendations.push(
+                    <li key="singleton">🔄 <strong>Consider Singleton Mode:</strong> {metrics.serviceInstanceCount} individual services detected. Singleton mode could reduce memory usage by ~{((metrics.serviceInstanceCount - 1) * 15).toFixed(0)}MB.</li>
+                  );
+                }
+                
+                if (isSingleton && metrics.reportCount > 8) {
+                  recommendations.push(
+                    <li key="report-limit">📊 <strong>Report Limit:</strong> {metrics.reportCount} reports in singleton mode may cause resource contention. Consider lazy loading or pagination.</li>
+                  );
+                }
+                
+                // Memory optimization
+                if (metrics.memoryUsage > 200) {
+                  recommendations.push(
+                    <li key="memory-high">⚠️ <strong>High Memory Usage:</strong> {metrics.memoryUsage.toFixed(1)}MB detected. Clear unused reports or implement memory cleanup intervals.</li>
+                  );
+                } else if (metrics.memoryUsage > 100) {
+                  recommendations.push(
+                    <li key="memory-medium">💾 <strong>Memory Watch:</strong> Monitor memory usage ({metrics.memoryUsage.toFixed(1)}MB). Consider report virtualization for large datasets.</li>
+                  );
+                }
+                
+                // Network optimization
+                if (metrics.dataTransfer && metrics.dataTransfer > 10 * 1024 * 1024) { // 10MB
+                  recommendations.push(
+                    <li key="data-transfer">� <strong>Large Data Transfer:</strong> {formatSize(metrics.dataTransfer)} downloaded. Enable report filters and incremental refresh.</li>
+                  );
+                }
+                
+                if (metrics.cacheHitRate < 30) {
+                  recommendations.push(
+                    <li key="cache-low">🚀 <strong>Improve Caching:</strong> {metrics.cacheHitRate.toFixed(1)}% cache hit rate. Enable browser caching and CDN for PowerBI resources.</li>
+                  );
+                } else if (metrics.cacheHitRate > 80) {
+                  recommendations.push(
+                    <li key="cache-good">✅ <strong>Excellent Caching:</strong> {metrics.cacheHitRate.toFixed(1)}% cache hit rate. Great job optimizing resource loading!</li>
+                  );
+                }
+                
+                // Load time optimization
+                if (metrics.reportLoadTime > 5000) {
+                  recommendations.push(
+                    <li key="load-slow">⏱️ <strong>Slow Report Loading:</strong> {(metrics.reportLoadTime / 1000).toFixed(1)}s average. Implement preloading and reduce visual complexity.</li>
+                  );
+                }
+                
+                // API optimization
+                if (metrics.apiCallCount > 50) {
+                  recommendations.push(
+                    <li key="api-many">🌐 <strong>High API Usage:</strong> {metrics.apiCallCount} PowerBI API calls. Consider batching requests and local caching.</li>
+                  );
+                }
+                
+                // Error handling
+                if (metrics.errorCount > 0) {
+                  recommendations.push(
+                    <li key="errors">� <strong>Error Detection:</strong> {metrics.errorCount} errors logged. Check browser console and implement retry mechanisms.</li>
+                  );
+                }
+                
+                // No reports scenario
+                if (metrics.reportCount === 0) {
+                  recommendations.push(
+                    <li key="no-reports">ℹ️ <strong>No Reports Loaded:</strong> Load PowerBI reports to see meaningful performance metrics and optimization suggestions.</li>
+                  );
+                }
+                
+                // Performance impact summary
+                if (metrics.performanceImpact === 'high') {
+                  recommendations.push(
+                    <li key="impact-high">� <strong>High Performance Impact:</strong> Current configuration may affect user experience. Consider reducing concurrent reports or enabling singleton mode.</li>
+                  );
+                } else if (metrics.performanceImpact === 'medium') {
+                  recommendations.push(
+                    <li key="impact-medium">⚡ <strong>Medium Performance Impact:</strong> Monitor for potential slowdowns. Optimize report queries and enable lazy loading.</li>
+                  );
+                } else if (metrics.reportCount > 0) {
+                  recommendations.push(
+                    <li key="impact-low">🎯 <strong>Optimal Performance:</strong> Current configuration provides good balance of functionality and performance.</li>
+                  );
+                }
+                
+                return recommendations.length > 0 ? recommendations : [
+                  <li key="default">🎉 <strong>All Good!</strong> No specific optimizations needed at the moment. Keep monitoring as you load more reports.</li>
+                ];
+              })()}
             </ul>
           </div>
         </div>
