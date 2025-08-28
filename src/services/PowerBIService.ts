@@ -15,6 +15,7 @@ interface PowerBIServiceConfig {
     enablePerformanceTracking?: boolean;
     enableLogging?: boolean;
     autoRefreshToken?: boolean;
+    useSingletonMode?: boolean; // New option to enable/disable singleton mode
 }
 
 interface EmbedInstance {
@@ -33,6 +34,7 @@ class PowerBIService {
     private initialized: boolean = false;
     private performanceTrackingEnabled: boolean = false;
     private loggingEnabled: boolean = true;
+    private useSingletonMode: boolean = true; // Default to singleton mode
 
     private constructor() {
         // Service singleton Power BI
@@ -61,6 +63,7 @@ class PowerBIService {
         this.initialized = true;
         this.performanceTrackingEnabled = config.enablePerformanceTracking ?? true;
         this.loggingEnabled = config.enableLogging ?? true;
+        this.useSingletonMode = config.useSingletonMode ?? true; // Set singleton mode
         
         // Configurer les services d'authentification et de configuration
         powerBIAuthService.setLogging(this.loggingEnabled);
@@ -424,16 +427,17 @@ class PowerBIService {
     /**
      * Gets detailed service and frame metrics
      */
-    getLoadedInstancesCount(): { services: number; frames: number; reports: number; dashboards: number } {
+    getLoadedInstancesCount(): { services: number; frames: number; reports: number; dashboards: number; singletonMode: boolean } {
         const reports = Array.from(this.embeddedInstances.values()).filter(instance => instance.type === 'report').length;
         const dashboards = Array.from(this.embeddedInstances.values()).filter(instance => instance.type === 'dashboard').length;
         const activeFrames = document.querySelectorAll('iframe[src*="powerbi.com"], iframe[src*="analysis.windows.net"]').length;
         
         return { 
-            services: 1, // Always 1 since we use a singleton service
+            services: this.useSingletonMode ? 1 : this.embeddedInstances.size, // 1 if singleton, count of instances if not
             frames: activeFrames,
             reports: reports,
-            dashboards: dashboards
+            dashboards: dashboards,
+            singletonMode: this.useSingletonMode
         };
     }
 
@@ -515,6 +519,35 @@ class PowerBIService {
     }
 
     /**
+     * Vérifie si le mode singleton est activé
+     */
+    isSingletonModeEnabled(): boolean {
+        return this.useSingletonMode;
+    }
+
+    /**
+     * Active ou désactive le mode singleton
+     */
+    setSingletonMode(enabled: boolean): void {
+        this.useSingletonMode = enabled;
+        
+        if (this.loggingEnabled) {
+            console.log(`🔧 Singleton mode ${enabled ? 'enabled' : 'disabled'}`);
+        }
+    }
+
+    /**
+     * Crée une nouvelle instance de service (pour le mode non-singleton)
+     */
+    createNewServiceInstance(): service.Service {
+        return new service.Service(
+            factories.hpmFactory,
+            factories.wpmpFactory,
+            factories.routerFactory
+        );
+    }
+
+    /**
      * Enregistre une instance embed directement (pour les composants qui créent leurs propres embeds)
      */
     registerEmbedInstance(containerId: string, type: 'report' | 'dashboard' | 'tile', instance: Report | Dashboard | Tile, container: HTMLElement, config: any): void {
@@ -542,6 +575,50 @@ class PowerBIService {
                 console.log(`🗑️ Unregistered embed instance: ${containerId}`);
             }
         }
+    }
+
+    /**
+     * Obtient un token valide via le service d'authentification
+     */
+    async getValidToken(): Promise<string> {
+        try {
+            const token = await powerBIAuthService.getValidToken();
+            
+            // Validate token before using it
+            if (!token || token.length < 10) {
+                throw new Error('Invalid token received from auth service');
+            }
+            
+            if (this.globalConfig) {
+                this.globalConfig.accessToken = token;
+            }
+            
+            if (this.loggingEnabled) {
+                console.log('🔑 Token refreshed successfully', {
+                    tokenLength: token.length,
+                    tokenPrefix: token.substring(0, 10) + '...'
+                });
+            }
+            
+            return token;
+        } catch (error) {
+            if (this.loggingEnabled) {
+                console.error('❌ Failed to get valid token:', error);
+            }
+            throw error;
+        }
+    }
+
+    /**
+     * Valide si un token semble valide
+     */
+    isTokenValid(token: string): boolean {
+        if (!token || typeof token !== 'string') {
+            return false;
+        }
+        
+        // Basic token validation - should be long enough and look like a JWT or similar
+        return token.length > 50 && (token.includes('.') || token.startsWith('H4sI'));
     }
 
     /**

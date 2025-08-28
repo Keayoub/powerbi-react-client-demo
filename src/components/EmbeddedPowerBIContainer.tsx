@@ -101,11 +101,16 @@ export const EmbeddedPowerBIContainer: React.FC<
     onErrorRef.current = onError;
   }, [onError]);
 
-  // Initialize PowerBI service - use singleton
+  // Initialize PowerBI service - use singleton or individual instance
   useEffect(() => {
     if (!serviceRef.current) {
-      serviceRef.current = powerBIService.getServiceInstance();
-      console.log("🔧 Enhanced PowerBI service initialized using singleton");
+      if (powerBIService.isSingletonModeEnabled()) {
+        serviceRef.current = powerBIService.getServiceInstance();
+        console.log("🔧 Enhanced PowerBI service initialized using singleton");
+      } else {
+        serviceRef.current = powerBIService.createNewServiceInstance();
+        console.log("🔧 Enhanced PowerBI service initialized using individual instance");
+      }
     }
   }, []);
 
@@ -152,8 +157,10 @@ export const EmbeddedPowerBIContainer: React.FC<
     console.log("🧹 Starting enhanced cleanup for:", instanceId.current);
 
     try {
-      // Unregister from singleton service
-      powerBIService.unregisterEmbedInstance(instanceId.current);
+      // Unregister from singleton service (only in singleton mode)
+      if (powerBIService.isSingletonModeEnabled()) {
+        powerBIService.unregisterEmbedInstance(instanceId.current);
+      }
 
       if (reportRef.current) {
         reportRef.current.off("loaded");
@@ -306,14 +313,16 @@ export const EmbeddedPowerBIContainer: React.FC<
         globalActiveLoads = Math.max(0, globalActiveLoads - 1);
         processLoadQueue(); // Process any queued loads
 
-        // Register the report instance with the singleton service for metrics tracking
-        powerBIService.registerEmbedInstance(
-          instanceId.current,
-          'report',
-          report,
-          detachedContainer,
-          config
-        );
+        // Register the report instance with the singleton service for metrics tracking (only in singleton mode)
+        if (powerBIService.isSingletonModeEnabled()) {
+          powerBIService.registerEmbedInstance(
+            instanceId.current,
+            'report',
+            report,
+            detachedContainer,
+            config
+          );
+        }
 
         // Store report instance globally for control operations
         (window as any)[`powerbiReport_${reportId}`] = report;
@@ -328,19 +337,47 @@ export const EmbeddedPowerBIContainer: React.FC<
           detail: event?.detail || event,
           reportId: reportId
         };
-        
         console.error(`❌ Enhanced PowerBI error for ${reportId}:`, errorDetails);
         
         // More specific error message based on error code/type
         let userFriendlyError = "Enhanced PowerBI embedding error occurred";
         if (errorDetails.code?.includes('TokenExpired') || errorDetails.message?.includes('token')) {
-          userFriendlyError = "Access token expired or invalid";
+          userFriendlyError = "Access token expired or invalid - please refresh the page";
         } else if (errorDetails.code?.includes('NotFound') || errorDetails.message?.includes('not found')) {
           userFriendlyError = "Report not found or access denied";
         } else if (errorDetails.code?.includes('Unauthorized') || errorDetails.message?.includes('unauthorized')) {
           userFriendlyError = "Unauthorized access to report";
-        } else if (errorDetails.message) {
-          userFriendlyError = `Error: ${errorDetails.message}`;
+        } else if (errorDetails.code?.includes('QueryUserError') || errorDetails.message?.includes('QueryUserError')) {
+          userFriendlyError = "Power BI query error - this may be due to token expiration, rate limiting, or permissions issue. Try refreshing the page or reducing concurrent reports.";
+          
+          // If this is a duplicate report (ID contains 'duplicate'), implement retry logic
+          if (reportId.includes('duplicate')) {
+            console.log(`🔄 QueryUserError detected for duplicate report ${reportId}, will retry with delay...`);
+            
+            // Clear current error state and retry after delay
+            setTimeout(async () => {
+              try {
+                console.log(`🔄 Retrying duplicate report ${reportId} after QueryUserError...`);
+                
+                // Clear the container and try to re-embed with a delay
+                if (detachedContainerRef.current) {
+                  detachedContainerRef.current.innerHTML = '';
+                }
+                
+                // Add extra delay for retries
+                await new Promise(resolve => setTimeout(resolve, 2000));
+                
+                // Retry the embed
+                embedReport();
+              } catch (retryError) {
+                console.error(`❌ Retry failed for ${reportId}:`, retryError);
+              }
+            }, 3000); // 3 second delay before retry
+          }
+        } else if (errorDetails.code?.includes('RateLimited') || errorDetails.message?.includes('rate')) {
+          userFriendlyError = "Too many requests - please wait a moment before trying again";
+        } else {
+          userFriendlyError = errorDetails.message || "Enhanced PowerBI embedding error occurred";
         }
         
         setHasError(userFriendlyError);

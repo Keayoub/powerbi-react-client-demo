@@ -190,6 +190,81 @@ The main testing interface includes:
 
 This project implements a **Singleton Pattern** for the PowerBI service to optimize performance and resource usage:
 
+#### Singleton Mode Toggle Feature
+
+The application now includes a **configurable singleton mode** that allows you to switch between singleton and individual service instances:
+
+##### Benefits of Each Mode
+
+**Singleton Mode (Recommended - Default):**
+- ✅ **Single Service Instance**: Only one PowerBI service across the entire application
+- ✅ **Memory Efficient**: Prevents memory leaks from multiple service instances
+- ✅ **Shared Authentication**: Centralized token management
+- ✅ **Performance Optimized**: Reduced overhead and resource usage
+- ✅ **State Persistence**: Service state maintained across components
+
+**Individual Mode:**
+- ⚠️ **Multiple Services**: Each component creates its own PowerBI service instance
+- ⚠️ **Higher Memory Usage**: More memory consumption with multiple instances
+- ✅ **Component Isolation**: Each report has completely independent service
+- ✅ **Testing Scenarios**: Useful for testing service behavior independently
+
+##### How to Toggle Singleton Mode
+
+**In the UI:**
+1. Navigate to the MPA Test Page
+2. Look for the **"Toggle Singleton Mode"** button in the control panel
+3. Click to switch between modes:
+   - 🔒 **Singleton Mode**: Shows "1" in PowerBI Service counter
+   - 🔓 **Individual Mode**: Shows increasing numbers as reports are added
+
+**Programmatically:**
+```typescript
+import { powerBIService } from '../services/PowerBIService';
+
+// Enable singleton mode (default)
+powerBIService.setSingletonMode(true);
+
+// Disable singleton mode (individual instances)
+powerBIService.setSingletonMode(false);
+
+// Check current mode
+const isSingleton = powerBIService.getSingletonMode();
+console.log('Singleton mode:', isSingleton);
+```
+
+##### Visual Indicators
+
+The service metrics display shows the current mode:
+
+- **PowerBI Service (Singleton)**: Shows `1` when in singleton mode
+- **PowerBI Service (Individual)**: Shows increasing count in individual mode
+- **Service Counter Color**: Different colors indicate the current mode
+
+##### When to Use Each Mode
+
+**Use Singleton Mode (Default) when:**
+- Building production applications
+- Need optimal performance and memory usage
+- Want centralized authentication and state management
+- Working with multiple reports in the same session
+
+**Use Individual Mode when:**
+- Testing specific service behaviors
+- Need complete isolation between reports
+- Debugging service-related issues
+- Prototyping or development scenarios
+
+##### Performance Impact
+
+| Metric | Singleton Mode | Individual Mode |
+|--------|---------------|-----------------|
+| Memory Usage | ✅ Low (~1 service) | ❌ High (~N services) |
+| Load Time | ✅ Fast | ⚠️ Slower |
+| Token Efficiency | ✅ Shared | ❌ Duplicated |
+| State Management | ✅ Centralized | ❌ Scattered |
+| Error Handling | ✅ Unified | ❌ Complex |
+
 #### Benefits of Singleton Implementation
 
 - **Single Service Instance**: Only one PowerBI service instance per application session
@@ -259,6 +334,34 @@ src/
 ```
 
 ## 🎯 Usage Examples
+
+### Singleton Mode Configuration
+
+```typescript
+// Toggle singleton mode programmatically
+import { powerBIService } from './services/PowerBIService';
+
+// Enable singleton mode for optimal performance (default)
+powerBIService.setSingletonMode(true);
+
+// Disable for individual service instances (testing)
+powerBIService.setSingletonMode(false);
+
+// Check current mode
+const isUsingSingleton = powerBIService.getSingletonMode();
+console.log('Using singleton mode:', isUsingSingleton);
+```
+
+### Monitoring Service Instances
+
+```typescript
+// Get real-time service metrics
+const metrics = powerBIService.getLoadedInstancesCount();
+console.log('Services:', metrics.services);          // 1 in singleton, N in individual
+console.log('Frames:', metrics.frames);             // Total active frames
+console.log('Reports:', metrics.reports);           // Number of reports
+console.log('Singleton Mode:', metrics.singletonMode); // Current mode
+```
 
 ### Basic Report Embedding
 

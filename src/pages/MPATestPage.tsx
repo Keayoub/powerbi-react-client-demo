@@ -33,21 +33,31 @@ interface ServiceMetrics {
   activeFrames: number;
   reports: number;
   dashboards: number;
+  singletonMode: boolean;
 }
 
 const MPATestPage: React.FC = () => {
-  const [optimizedReports, setOptimizedReports] = useState<OptimizedReport[]>([]);
-  const [performanceMetrics, setPerformanceMetrics] = useState<PerformanceMetrics[]>([]);
+  const [optimizedReports, setOptimizedReports] = useState<OptimizedReport[]>(
+    []
+  );
+  const [performanceMetrics, setPerformanceMetrics] = useState<
+    PerformanceMetrics[]
+  >([]);
   const [currentTestRun, setCurrentTestRun] = useState<number>(1);
-  const [isWorkspaceBrowserOpen, setIsWorkspaceBrowserOpen] = useState<boolean>(false);
+  const [isWorkspaceBrowserOpen, setIsWorkspaceBrowserOpen] =
+    useState<boolean>(false);
   const [embedError, setEmbedError] = useState<string | null>(null);
   const [isAnalysisMode, setIsAnalysisMode] = useState<boolean>(false);
   const [serviceMetrics, setServiceMetrics] = useState<ServiceMetrics>({
     totalServices: 0,
     activeFrames: 0,
     reports: 0,
-    dashboards: 0
+    dashboards: 0,
+    singletonMode: true,
   });
+
+  // Track concurrent duplications to prevent overloading
+  const [activeDuplications, setActiveDuplications] = useState<number>(0);
 
   // References for performance tracking
   const testRunIdRef = useRef<number>(0);
@@ -61,7 +71,8 @@ const MPATestPage: React.FC = () => {
         totalServices: metrics.services,
         activeFrames: metrics.frames,
         reports: metrics.reports,
-        dashboards: metrics.dashboards
+        dashboards: metrics.dashboards,
+        singletonMode: metrics.singletonMode,
       });
     };
 
@@ -75,21 +86,32 @@ const MPATestPage: React.FC = () => {
   }, [optimizedReports.length]);
 
   // Store pending report configuration for workspace selection
-  const [pendingReportConfig, setPendingReportConfig] = useState<{priority: "high" | "normal" | "low", lazyLoad: boolean} | null>(null);
+  const [pendingReportConfig, setPendingReportConfig] = useState<{
+    priority: "high" | "normal" | "low";
+    lazyLoad: boolean;
+  } | null>(null);
 
   // Priority queue optimizations
-  const addOptimizedReport = (priority: "high" | "normal" | "low", lazyLoad: boolean) => {
+  const addOptimizedReport = (
+    priority: "high" | "normal" | "low",
+    lazyLoad: boolean
+  ) => {
     // Always open workspace browser for report selection
     setPendingReportConfig({ priority, lazyLoad });
     setIsWorkspaceBrowserOpen(true);
   };
 
   const removeOptimizedReport = (reportId: string) => {
-    setOptimizedReports((prev: OptimizedReport[]) => prev.filter((report) => report.id !== reportId));
-    
+    // If removing a duplicate report that was counted in active duplications, 
+    // we need to handle this in the component lifecycle rather than here
+    // since this just removes from the list, not from active processing
+    setOptimizedReports((prev: OptimizedReport[]) =>
+      prev.filter((report) => report.id !== reportId)
+    );
+
     // Clean up start time tracking
     reportStartTimesRef.current.delete(reportId);
-    
+
     setCurrentTestRun((prev: number) => prev + 1);
   };
 
@@ -99,16 +121,22 @@ const MPATestPage: React.FC = () => {
     setPerformanceMetrics([]);
     setCurrentTestRun(1);
     testRunIdRef.current = 0;
+    setActiveDuplications(0); // Reset duplications counter
+    setEmbedError(null); // Clear any errors
   };
 
-  const handleReportLoaded = (reportId: string, priority: "high" | "normal" | "low", lazyLoad: boolean) => {
+  const handleReportLoaded = (
+    reportId: string,
+    priority: "high" | "normal" | "low",
+    lazyLoad: boolean
+  ) => {
     const currentTime = Date.now();
     const startTime = reportStartTimesRef.current.get(reportId);
-    
+
     if (startTime) {
       // Calculate elapsed time properly (currentTime - startTime)
       const loadTime = currentTime - startTime;
-      
+
       setPerformanceMetrics((prev: PerformanceMetrics[]) => [
         ...prev,
         {
@@ -128,48 +156,59 @@ const MPATestPage: React.FC = () => {
 
   const handleReportError = (reportId: string, error: any) => {
     console.error(`Report ${reportId} failed to load:`, error);
-    setEmbedError(`Report ${reportId} failed to load: ${error.message || error}`);
-    
+    setEmbedError(
+      `Report ${reportId} failed to load: ${error.message || error}`
+    );
+
     // Clean up start time even on error
     reportStartTimesRef.current.delete(reportId);
   };
 
   const reloadAllReports = () => {
-    console.log('🔄 Reloading all embedded reports...');
-    
+    console.log("🔄 Reloading all embedded reports...");
+
     // Clear any existing errors
     setEmbedError(null);
-    
+
     // Reset performance metrics for fresh tracking
     setPerformanceMetrics([]);
-    
+
     // Clear existing start times
     reportStartTimesRef.current.clear();
-    
+
     // Reset start times for all current reports
-    optimizedReports.forEach(report => {
+    optimizedReports.forEach((report) => {
       reportStartTimesRef.current.set(report.id, Date.now());
     });
-    
+
     // Increment test run to trigger re-render of all components
     setCurrentTestRun((prev: number) => prev + 1);
-    
+
     console.log(`✅ Reloaded ${optimizedReports.length} reports`);
   };
 
-  const handleWorkspaceSelection = (token: string, embedUrl: string, selection: any) => {
+  const handleWorkspaceSelection = (
+    token: string,
+    embedUrl: string,
+    selection: any
+  ) => {
     testRunIdRef.current += 1;
     const localReportId = `workspace-report-${testRunIdRef.current}`;
-    
+
     // Record start time for performance tracking
     reportStartTimesRef.current.set(localReportId, Date.now());
 
     // Use pending configuration or default to normal priority
-    const config = pendingReportConfig || { priority: "normal" as const, lazyLoad: false };
+    const config = pendingReportConfig || {
+      priority: "normal" as const,
+      lazyLoad: false,
+    };
 
     const newReport: OptimizedReport = {
       id: localReportId,
-      name: `${config.priority.toUpperCase()} - ${selection?.report?.name || `Workspace Report ${testRunIdRef.current}`}${config.lazyLoad ? " (Lazy)" : ""}`,
+      name: `${config.priority.toUpperCase()} - ${
+        selection?.report?.name || `Workspace Report ${testRunIdRef.current}`
+      }${config.lazyLoad ? " (Lazy)" : ""}`,
       embedUrl: embedUrl,
       accessToken: token,
       workspaceName: selection?.workspace?.name || "Selected Workspace",
@@ -177,7 +216,7 @@ const MPATestPage: React.FC = () => {
       lazyLoad: config.lazyLoad,
       addedAt: new Date(),
       // Store the actual Power BI report ID for embedding
-      powerBiReportId: selection?.report?.id
+      powerBiReportId: selection?.report?.id,
     };
 
     setOptimizedReports((prev: OptimizedReport[]) => {
@@ -195,7 +234,10 @@ const MPATestPage: React.FC = () => {
 
   const calculateAverageLoadTime = () => {
     if (performanceMetrics.length === 0) return 0;
-    const total = performanceMetrics.reduce((sum, metric) => sum + metric.loadTime, 0);
+    const total = performanceMetrics.reduce(
+      (sum, metric) => sum + metric.loadTime,
+      0
+    );
     return Math.round(total / performanceMetrics.length);
   };
 
@@ -214,14 +256,14 @@ const MPATestPage: React.FC = () => {
 
   const startPerformanceTest = () => {
     resetPerformanceTest();
-    
+
     // Add reports with different priorities and lazy loading configurations
     setTimeout(() => addOptimizedReport("high", false), 100);
     setTimeout(() => addOptimizedReport("normal", false), 200);
     setTimeout(() => addOptimizedReport("low", true), 300);
     setTimeout(() => addOptimizedReport("high", true), 400);
     setTimeout(() => addOptimizedReport("normal", true), 500);
-    
+
     setCurrentTestRun((prev: number) => prev + 1);
   };
 
@@ -246,53 +288,80 @@ const MPATestPage: React.FC = () => {
       summary: {
         totalTests: performanceMetrics.length,
         averageLoadTime: calculateAverageLoadTime(),
-        highPriorityAvg: getMetricsByPriority("high").length > 0 
-          ? Math.round(getMetricsByPriority("high").reduce((sum, m) => sum + m.loadTime, 0) / getMetricsByPriority("high").length)
-          : 0,
-        normalPriorityAvg: getMetricsByPriority("normal").length > 0
-          ? Math.round(getMetricsByPriority("normal").reduce((sum, m) => sum + m.loadTime, 0) / getMetricsByPriority("normal").length)
-          : 0,
-        lowPriorityAvg: getMetricsByPriority("low").length > 0
-          ? Math.round(getMetricsByPriority("low").reduce((sum, m) => sum + m.loadTime, 0) / getMetricsByPriority("low").length)
-          : 0,
+        highPriorityAvg:
+          getMetricsByPriority("high").length > 0
+            ? Math.round(
+                getMetricsByPriority("high").reduce(
+                  (sum, m) => sum + m.loadTime,
+                  0
+                ) / getMetricsByPriority("high").length
+              )
+            : 0,
+        normalPriorityAvg:
+          getMetricsByPriority("normal").length > 0
+            ? Math.round(
+                getMetricsByPriority("normal").reduce(
+                  (sum, m) => sum + m.loadTime,
+                  0
+                ) / getMetricsByPriority("normal").length
+              )
+            : 0,
+        lowPriorityAvg:
+          getMetricsByPriority("low").length > 0
+            ? Math.round(
+                getMetricsByPriority("low").reduce(
+                  (sum, m) => sum + m.loadTime,
+                  0
+                ) / getMetricsByPriority("low").length
+              )
+            : 0,
       },
     };
 
-    const blob = new Blob([JSON.stringify(data, null, 2)], { type: "application/json" });
+    const blob = new Blob([JSON.stringify(data, null, 2)], {
+      type: "application/json",
+    });
     const url = URL.createObjectURL(blob);
     const a = document.createElement("a");
     a.href = url;
-    a.download = `powerbi-performance-test-${currentTestRun}-${new Date().toISOString().split("T")[0]}.json`;
+    a.download = `powerbi-performance-test-${currentTestRun}-${
+      new Date().toISOString().split("T")[0]
+    }.json`;
     document.body.appendChild(a);
     a.click();
     document.body.removeChild(a);
     URL.revokeObjectURL(url);
   };
 
-  const PerformanceStatsCard = ({ 
-    title, 
-    value, 
-    unit = "ms", 
-    color = "#0078d4" 
-  }: { 
-    title: string; 
-    value: number; 
-    unit?: string; 
-    color?: string; 
+  const PerformanceStatsCard = ({
+    title,
+    value,
+    unit = "ms",
+    color = "#0078d4",
+  }: {
+    title: string;
+    value: number;
+    unit?: string;
+    color?: string;
   }) => (
-    <div style={{
-      background: "white",
-      border: `2px solid ${color}`,
-      borderRadius: "8px",
-      padding: "16px",
-      margin: "8px",
-      minWidth: "150px",
-      textAlign: "center",
-      boxShadow: "0 2px 4px rgba(0,0,0,0.1)",
-    }}>
-      <div style={{ fontSize: "14px", color: "#666", marginBottom: "8px" }}>{title}</div>
+    <div
+      style={{
+        background: "white",
+        border: `2px solid ${color}`,
+        borderRadius: "8px",
+        padding: "16px",
+        margin: "8px",
+        minWidth: "150px",
+        textAlign: "center",
+        boxShadow: "0 2px 4px rgba(0,0,0,0.1)",
+      }}
+    >
+      <div style={{ fontSize: "14px", color: "#666", marginBottom: "8px" }}>
+        {title}
+      </div>
       <div style={{ fontSize: "24px", fontWeight: "bold", color }}>
-        {value.toLocaleString()}{unit}
+        {value.toLocaleString()}
+        {unit}
       </div>
     </div>
   );
@@ -301,37 +370,81 @@ const MPATestPage: React.FC = () => {
     <div style={{ margin: "20px 0" }}>
       <h3>Detailed Performance Metrics</h3>
       <div style={{ overflowX: "auto" }}>
-        <table style={{ width: "100%", borderCollapse: "collapse", background: "white" }}>
+        <table
+          style={{
+            width: "100%",
+            borderCollapse: "collapse",
+            background: "white",
+          }}
+        >
           <thead>
             <tr style={{ background: "#f5f5f5" }}>
-              <th style={{ border: "1px solid #ddd", padding: "8px" }}>Load Time (ms)</th>
-              <th style={{ border: "1px solid #ddd", padding: "8px" }}>Priority</th>
-              <th style={{ border: "1px solid #ddd", padding: "8px" }}>Lazy Load</th>
-              <th style={{ border: "1px solid #ddd", padding: "8px" }}>Timestamp</th>
+              <th style={{ border: "1px solid #ddd", padding: "8px" }}>
+                Load Time (ms)
+              </th>
+              <th style={{ border: "1px solid #ddd", padding: "8px" }}>
+                Priority
+              </th>
+              <th style={{ border: "1px solid #ddd", padding: "8px" }}>
+                Lazy Load
+              </th>
+              <th style={{ border: "1px solid #ddd", padding: "8px" }}>
+                Timestamp
+              </th>
             </tr>
           </thead>
           <tbody>
             {performanceMetrics.map((metric, index) => (
               <tr key={index}>
-                <td style={{ border: "1px solid #ddd", padding: "8px", textAlign: "center" }}>
+                <td
+                  style={{
+                    border: "1px solid #ddd",
+                    padding: "8px",
+                    textAlign: "center",
+                  }}
+                >
                   {metric.loadTime.toLocaleString()}
                 </td>
-                <td style={{ border: "1px solid #ddd", padding: "8px", textAlign: "center" }}>
-                  <span style={{
-                    padding: "4px 8px",
-                    borderRadius: "4px",
-                    background: metric.priority === "high" ? "#ff6b6b" : 
-                               metric.priority === "normal" ? "#4ecdc4" : "#95a5a6",
-                    color: "white",
-                    fontSize: "12px"
-                  }}>
+                <td
+                  style={{
+                    border: "1px solid #ddd",
+                    padding: "8px",
+                    textAlign: "center",
+                  }}
+                >
+                  <span
+                    style={{
+                      padding: "4px 8px",
+                      borderRadius: "4px",
+                      background:
+                        metric.priority === "high"
+                          ? "#ff6b6b"
+                          : metric.priority === "normal"
+                          ? "#4ecdc4"
+                          : "#95a5a6",
+                      color: "white",
+                      fontSize: "12px",
+                    }}
+                  >
                     {metric.priority.toUpperCase()}
                   </span>
                 </td>
-                <td style={{ border: "1px solid #ddd", padding: "8px", textAlign: "center" }}>
+                <td
+                  style={{
+                    border: "1px solid #ddd",
+                    padding: "8px",
+                    textAlign: "center",
+                  }}
+                >
                   {metric.lazyLoad ? "✓" : "✗"}
                 </td>
-                <td style={{ border: "1px solid #ddd", padding: "8px", textAlign: "center" }}>
+                <td
+                  style={{
+                    border: "1px solid #ddd",
+                    padding: "8px",
+                    textAlign: "center",
+                  }}
+                >
                   {metric.timestamp.toLocaleTimeString()}
                 </td>
               </tr>
@@ -348,20 +461,23 @@ const MPATestPage: React.FC = () => {
 
   const renderOptimizedReport = (report: OptimizedReport) => (
     <div key={report.id} style={{ marginBottom: "20px" }}>
-      <div style={{
-        display: "flex",
-        justifyContent: "space-between",
-        alignItems: "center",
-        padding: "10px",
-        background: "#f8f9fa",
-        borderRadius: "8px 8px 0 0",
-        border: "1px solid #dee2e6",
-      }}>
+      <div
+        style={{
+          display: "flex",
+          justifyContent: "space-between",
+          alignItems: "center",
+          padding: "10px",
+          background: "#f8f9fa",
+          borderRadius: "8px 8px 0 0",
+          border: "1px solid #dee2e6",
+        }}
+      >
         <div>
           <strong>{report.name}</strong>
           <div style={{ fontSize: "12px", color: "#666" }}>
-            Priority: {report.priority} | Lazy Load: {report.lazyLoad ? "Yes" : "No"} | 
-            Added: {report.addedAt.toLocaleTimeString()}
+            Priority: {report.priority} | Lazy Load:{" "}
+            {report.lazyLoad ? "Yes" : "No"} | Added:{" "}
+            {report.addedAt.toLocaleTimeString()}
           </div>
         </div>
         <div style={{ display: "flex", gap: "5px" }}>
@@ -374,7 +490,7 @@ const MPATestPage: React.FC = () => {
               padding: "5px 10px",
               borderRadius: "4px",
               cursor: "pointer",
-              fontSize: "12px"
+              fontSize: "12px",
             }}
             title="Remove this report"
           >
@@ -389,7 +505,7 @@ const MPATestPage: React.FC = () => {
               padding: "5px 10px",
               borderRadius: "4px",
               cursor: "pointer",
-              fontSize: "12px"
+              fontSize: "12px",
             }}
             title="Duplicate this report with same settings"
           >
@@ -403,7 +519,9 @@ const MPATestPage: React.FC = () => {
           embedUrl={report.embedUrl}
           accessToken={report.accessToken}
           reportId={report.powerBiReportId || report.id}
-          onLoaded={(reportInstance) => handleReportLoaded(report.id, report.priority, report.lazyLoad)}
+          onLoaded={(reportInstance) =>
+            handleReportLoaded(report.id, report.priority, report.lazyLoad)
+          }
           onError={(error) => handleReportError(report.id, error)}
           height="400px"
           lazyLoad={report.lazyLoad}
@@ -413,53 +531,120 @@ const MPATestPage: React.FC = () => {
     </div>
   );
 
-  // Add a duplicate report function with enhanced feedback
-  const duplicateReport = (reportId: string) => {
-    const reportToDuplicate = optimizedReports.find((report) => report.id === reportId);
+  // Add a duplicate report function with enhanced feedback and token refresh
+  const duplicateReport = async (reportId: string) => {
+    // Limit concurrent duplications to prevent overloading Power BI API
+    if (activeDuplications >= 3) {
+      setEmbedError("Too many concurrent duplications. Please wait for current ones to complete.");
+      return;
+    }
+
+    const reportToDuplicate = optimizedReports.find(
+      (report) => report.id === reportId
+    );
     if (reportToDuplicate) {
-      testRunIdRef.current += 1;
-      const duplicateId = `duplicate-${Date.now()}-${testRunIdRef.current}`;
-      
-      // Record start time for performance tracking
-      reportStartTimesRef.current.set(duplicateId, Date.now());
-      
-      const newReport: OptimizedReport = {
-        ...reportToDuplicate,
-        id: duplicateId,
-        name: `${reportToDuplicate.name} (Copy #${testRunIdRef.current})`,
-        addedAt: new Date()
-      };
-      
-      setOptimizedReports((prev) => {
-        const updated = [...prev, newReport];
-        return updated.sort((a, b) => {
-          const priorityOrder = { high: 0, normal: 1, low: 2 };
-          return priorityOrder[a.priority] - priorityOrder[b.priority];
+      try {
+        // Increment active duplications counter
+        setActiveDuplications(prev => prev + 1);
+        
+        testRunIdRef.current += 1;
+        const duplicateId = `duplicate-${Date.now()}-${testRunIdRef.current}`;
+
+        // Record start time for performance tracking
+        reportStartTimesRef.current.set(duplicateId, Date.now());
+
+        // Add delay to prevent rate limiting (especially for multiple quick duplications)
+        await new Promise(resolve => setTimeout(resolve, 500)); // 500ms delay
+
+        // Try to get a fresh token for the duplicate to avoid token issues
+        let accessToken = reportToDuplicate.accessToken;
+        try {
+          // Check if we have access to token service and try to refresh
+          if (powerBIService.isInitialized()) {
+            const freshToken = await powerBIService.getValidToken();
+            
+            // Validate token is different and not empty
+            if (freshToken && freshToken !== accessToken && freshToken.length > 10) {
+              accessToken = freshToken;
+              console.log("🔄 Using fresh token for duplicate report");
+            } else {
+              console.warn("⚠️ Fresh token appears invalid or same as original, using original");
+            }
+          }
+        } catch (tokenError) {
+          console.warn(
+            "⚠️ Could not refresh token, using original:",
+            tokenError
+          );
+          // Continue with original token
+        }
+
+        // Generate a unique embed URL by adding a timestamp parameter to avoid caching issues
+        let uniqueEmbedUrl = reportToDuplicate.embedUrl;
+        if (uniqueEmbedUrl.includes('?')) {
+          uniqueEmbedUrl += `&_t=${Date.now()}`;
+        } else {
+          uniqueEmbedUrl += `?_t=${Date.now()}`;
+        }
+
+        const newReport: OptimizedReport = {
+          ...reportToDuplicate,
+          id: duplicateId,
+          name: `${reportToDuplicate.name} (Copy #${testRunIdRef.current})`,
+          accessToken: accessToken, // Use potentially refreshed token
+          embedUrl: uniqueEmbedUrl, // Use unique URL to avoid caching
+          addedAt: new Date(),
+        };
+
+        setOptimizedReports((prev) => {
+          const updated = [...prev, newReport];
+          return updated.sort((a, b) => {
+            const priorityOrder = { high: 0, normal: 1, low: 2 };
+            return priorityOrder[a.priority] - priorityOrder[b.priority];
+          });
         });
-      });
-      
-      // Trigger re-render
-      setCurrentTestRun((prev: number) => prev + 1);
-      
-      // Show success feedback
-      console.log(`📋 Duplicated report: ${reportToDuplicate.name}`);
+
+        // Trigger re-render
+        setCurrentTestRun((prev: number) => prev + 1);
+
+        // Show success feedback
+        console.log(`📋 Duplicated report: ${reportToDuplicate.name}`);
+      } catch (error) {
+        console.error(
+          `❌ Failed to duplicate report ${reportToDuplicate.name}:`,
+          error
+        );
+        setEmbedError(
+          `Failed to duplicate report: ${
+            error instanceof Error ? error.message : "Unknown error"
+          }`
+        );
+      } finally {
+        // Decrement active duplications counter
+        setActiveDuplications(prev => Math.max(0, prev - 1));
+      }
     }
   };
 
   return (
     <div style={{ padding: "20px" }}>
       <h1>Multi-PowerBI Analysis (MPA) Test Page</h1>
-      <p>Test and analyze multiple PowerBI reports with different optimization strategies.</p>
+      <p>
+        Test and analyze multiple PowerBI reports with different optimization
+        strategies.
+      </p>
 
       {embedError && (
-        <div style={{
-          background: "#f8d7da",
-          color: "#721c24",
-          padding: "10px",
-          borderRadius: "4px",
-          marginBottom: "20px",
-          border: "1px solid #f5c6cb",
-        }}>
+        <div
+          style={{
+            background: "#f8d7da",
+            color: "#721c24",
+            padding: "10px",
+            borderRadius: "4px",
+            marginBottom: "20px",
+            border: "1px solid #f5c6cb",
+          }}
+        >
           {embedError}
           <button
             onClick={() => setEmbedError(null)}
@@ -479,7 +664,14 @@ const MPATestPage: React.FC = () => {
 
       <div style={{ marginBottom: "20px" }}>
         <h2>Performance Dashboard</h2>
-        <div style={{ display: "flex", flexWrap: "wrap", gap: "10px", marginBottom: "20px" }}>
+        <div
+          style={{
+            display: "flex",
+            flexWrap: "wrap",
+            gap: "10px",
+            marginBottom: "20px",
+          }}
+        >
           <PerformanceStatsCard
             title="Total Reports"
             value={optimizedReports.length}
@@ -505,6 +697,12 @@ const MPATestPage: React.FC = () => {
             color="#ff9f43"
           />
           <PerformanceStatsCard
+            title="Active Duplications"
+            value={activeDuplications}
+            unit="/3 max"
+            color={activeDuplications >= 3 ? "#dc3545" : "#28a745"}
+          />
+          <PerformanceStatsCard
             title="Tests Completed"
             value={performanceMetrics.length}
             unit=""
@@ -518,25 +716,46 @@ const MPATestPage: React.FC = () => {
           />
           <PerformanceStatsCard
             title="High Priority Avg"
-            value={getMetricsByPriority("high").length > 0 ? Math.round(
-              getMetricsByPriority("high").reduce((sum, m) => sum + m.loadTime, 0) / getMetricsByPriority("high").length
-            ) : 0}
+            value={
+              getMetricsByPriority("high").length > 0
+                ? Math.round(
+                    getMetricsByPriority("high").reduce(
+                      (sum, m) => sum + m.loadTime,
+                      0
+                    ) / getMetricsByPriority("high").length
+                  )
+                : 0
+            }
             unit="ms"
             color="#dc3545"
           />
           <PerformanceStatsCard
             title="Normal Priority Avg"
-            value={getMetricsByPriority("normal").length > 0 ? Math.round(
-              getMetricsByPriority("normal").reduce((sum, m) => sum + m.loadTime, 0) / getMetricsByPriority("normal").length
-            ) : 0}
+            value={
+              getMetricsByPriority("normal").length > 0
+                ? Math.round(
+                    getMetricsByPriority("normal").reduce(
+                      (sum, m) => sum + m.loadTime,
+                      0
+                    ) / getMetricsByPriority("normal").length
+                  )
+                : 0
+            }
             unit="ms"
             color="#28a745"
           />
           <PerformanceStatsCard
             title="Low Priority Avg"
-            value={getMetricsByPriority("low").length > 0 ? Math.round(
-              getMetricsByPriority("low").reduce((sum, m) => sum + m.loadTime, 0) / getMetricsByPriority("low").length
-            ) : 0}
+            value={
+              getMetricsByPriority("low").length > 0
+                ? Math.round(
+                    getMetricsByPriority("low").reduce(
+                      (sum, m) => sum + m.loadTime,
+                      0
+                    ) / getMetricsByPriority("low").length
+                  )
+                : 0
+            }
             unit="ms"
             color="#6c757d"
           />
@@ -546,10 +765,22 @@ const MPATestPage: React.FC = () => {
       <div style={{ marginBottom: "20px" }}>
         <h2>Control Panel</h2>
         <p style={{ color: "#666", marginBottom: "15px" }}>
-          🎯 <strong>All priority buttons open workspace selection</strong> - Choose a report from your Power BI workspace and it will be added with the specified priority and settings.<br/>
-          🔄 <strong>Reload All Reports</strong> - Refreshes all embedded reports while keeping your selections (useful for performance testing or data refresh).
+          🎯 <strong>All priority buttons open workspace selection</strong> -
+          Choose a report from your Power BI workspace and it will be added with
+          the specified priority and settings.
+          <br />
+          🔄 <strong>Reload All Reports</strong> - Refreshes all embedded
+          reports while keeping your selections (useful for performance testing
+          or data refresh).
         </p>
-        <div style={{ display: "flex", flexWrap: "wrap", gap: "10px", marginBottom: "20px" }}>
+        <div
+          style={{
+            display: "flex",
+            flexWrap: "wrap",
+            gap: "10px",
+            marginBottom: "20px",
+          }}
+        >
           <button
             onClick={() => addOptimizedReport("high", false)}
             style={{
@@ -655,16 +886,47 @@ const MPATestPage: React.FC = () => {
           >
             {isAnalysisMode ? "Hide Analysis" : "Show Analysis"}
           </button>
+          <button
+            onClick={() => {
+              const newMode = !serviceMetrics.singletonMode;
+              powerBIService.setSingletonMode(newMode);
+
+              // Clear all reports to ensure proper reinitialization
+              clearAllReports();
+
+              // Show notification
+              alert(
+                `Singleton mode ${
+                  newMode ? "enabled" : "disabled"
+                }. All reports have been cleared for proper reinitialization.`
+              );
+            }}
+            style={{
+              background: serviceMetrics.singletonMode ? "#17a2b8" : "#ffc107",
+              color: serviceMetrics.singletonMode ? "white" : "black",
+              border: "none",
+              padding: "10px 20px",
+              borderRadius: "4px",
+              cursor: "pointer",
+              fontWeight: "bold",
+            }}
+          >
+            🔧{" "}
+            {serviceMetrics.singletonMode ? "Singleton: ON" : "Singleton: OFF"}
+          </button>
         </div>
       </div>
 
-      {isAnalysisMode && performanceMetrics.length > 0 && <AdvancedStatsTable />}
+      {isAnalysisMode && performanceMetrics.length > 0 && (
+        <AdvancedStatsTable />
+      )}
 
       <div style={{ marginBottom: "20px" }}>
         <h2>Embedded Reports (Test Run #{currentTestRun})</h2>
         {optimizedReports.length === 0 ? (
           <p style={{ color: "#666", fontStyle: "italic" }}>
-            No reports loaded. Use the control panel above to add reports and test performance.
+            No reports loaded. Use the control panel above to add reports and
+            test performance.
           </p>
         ) : (
           optimizedReports.map(renderOptimizedReport)
@@ -672,35 +934,45 @@ const MPATestPage: React.FC = () => {
       </div>
 
       {isWorkspaceBrowserOpen && (
-        <div style={{
-          position: "fixed",
-          top: 0,
-          left: 0,
-          right: 0,
-          bottom: 0,
-          background: "rgba(0,0,0,0.5)",
-          display: "flex",
-          justifyContent: "center",
-          alignItems: "center",
-          zIndex: 1000,
-        }}>
-          <div style={{
-            background: "white",
-            padding: "20px",
-            borderRadius: "8px",
-            maxWidth: "80%",
-            maxHeight: "80%",
-            overflow: "auto",
-          }}>
+        <div
+          style={{
+            position: "fixed",
+            top: 0,
+            left: 0,
+            right: 0,
+            bottom: 0,
+            background: "rgba(0,0,0,0.5)",
+            display: "flex",
+            justifyContent: "center",
+            alignItems: "center",
+            zIndex: 1000,
+          }}
+        >
+          <div
+            style={{
+              background: "white",
+              padding: "20px",
+              borderRadius: "8px",
+              maxWidth: "80%",
+              maxHeight: "80%",
+              overflow: "auto",
+            }}
+          >
             {pendingReportConfig && (
-              <div style={{
-                marginBottom: "15px",
-                padding: "10px",
-                backgroundColor: "#e7f3ff",
-                borderRadius: "4px",
-                border: "1px solid #b3d9ff"
-              }}>
-                <strong>🎯 Selecting report for: {pendingReportConfig.priority.toUpperCase()} Priority{pendingReportConfig.lazyLoad ? " (Lazy Load)" : ""}</strong>
+              <div
+                style={{
+                  marginBottom: "15px",
+                  padding: "10px",
+                  backgroundColor: "#e7f3ff",
+                  borderRadius: "4px",
+                  border: "1px solid #b3d9ff",
+                }}
+              >
+                <strong>
+                  🎯 Selecting report for:{" "}
+                  {pendingReportConfig.priority.toUpperCase()} Priority
+                  {pendingReportConfig.lazyLoad ? " (Lazy Load)" : ""}
+                </strong>
               </div>
             )}
             <WorkspaceBrowser
@@ -709,7 +981,7 @@ const MPATestPage: React.FC = () => {
                 setIsWorkspaceBrowserOpen(false);
               }}
             />
-            <button 
+            <button
               onClick={() => setIsWorkspaceBrowserOpen(false)}
               style={{
                 marginTop: "10px",
@@ -718,7 +990,7 @@ const MPATestPage: React.FC = () => {
                 color: "white",
                 border: "none",
                 borderRadius: "4px",
-                cursor: "pointer"
+                cursor: "pointer",
               }}
             >
               Close
