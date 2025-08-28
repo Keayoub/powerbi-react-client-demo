@@ -12,6 +12,9 @@ This project demonstrates embedding Power BI reports in a React application with
 - **Priority Loading**: High, normal, and low priority report loading
 - **Lazy Loading**: Optional lazy loading for better performance
 - **Environment Configuration**: Support for `.env.local` configuration
+- **Enhanced Toolbar**: Fullscreen, print, bookmark selection, and refresh functionality
+- **Bookmark Management**: Advanced bookmark creation, selection, and management
+- **Concurrent Control**: Intelligent duplication limiting to prevent API overload
 
 ## 📋 Prerequisites
 
@@ -185,6 +188,86 @@ The main testing interface includes:
 - **High Priority**: Immediate loading, highest performance
 - **Normal Priority**: Standard loading behavior
 - **Low Priority**: Lazy loading for optimal resource usage
+
+### Enhanced PowerBI Toolbar
+
+Each embedded Power BI report now includes a comprehensive toolbar with the following features:
+
+#### 🖥️ **Fullscreen Mode**
+- **Toggle Fullscreen**: Enter/exit fullscreen mode for focused report viewing
+- **Cross-browser Support**: Works with all major browsers (Chrome, Firefox, Safari, Edge)
+- **Keyboard Shortcuts**: Standard fullscreen shortcuts supported
+- **Responsive Design**: Optimized for different screen sizes
+
+#### 🖨️ **Print Functionality**
+- **Native Power BI Print**: Uses Power BI's built-in print capabilities
+- **High-Quality Output**: Preserves formatting and layout
+- **Page Optimization**: Automatically optimizes for print media
+- **Error Handling**: Graceful fallback if printing is unavailable
+
+#### 📚 **Bookmark Management**
+- **Quick Bookmark Selection**: Dropdown menu for fast bookmark navigation
+- **Bookmark Counter**: Shows total available bookmarks for each report
+- **Advanced Manager**: Full bookmark management interface
+- **Real-time Updates**: Automatically loads bookmarks when report changes
+
+#### 🔄 **Report Actions**
+- **Refresh Report**: Update report data with latest information
+- **Error Recovery**: Built-in retry mechanisms for failed operations
+- **Loading States**: Visual feedback during operations
+- **Status Indicators**: Real-time operation status
+
+#### 📊 **Report Information**
+- **Report Identification**: Display report name and ID
+- **Status Monitoring**: Real-time operation status
+- **Performance Indicators**: Loading and processing feedback
+- **Responsive Layout**: Adapts to different screen sizes
+
+#### Usage Examples
+
+**Enable/Disable Toolbar:**
+```typescript
+<EmbeddedPowerBIContainer
+  reportId="your-report-id"
+  embedUrl="your-embed-url"
+  accessToken="your-token"
+  reportName="Sales Dashboard"
+  showToolbar={true}  // Enable toolbar (default: true)
+  height="500px"
+/>
+```
+
+**Toolbar Features:**
+- **Fullscreen Button**: Click 🖥️ to enter fullscreen, 📺 to exit
+- **Print Button**: Click 🖨️ to open print dialog
+- **Bookmark Dropdown**: Click 📚 to see available bookmarks
+- **Refresh Button**: Click 🔄 to refresh report data
+
+**Keyboard Shortcuts:**
+- `F11` or `Esc`: Toggle fullscreen mode
+- `Ctrl+P`: Print report (when supported)
+
+### Concurrent Duplication Control
+
+The system now includes intelligent duplication limiting:
+
+#### 🚦 **Traffic Management**
+- **Maximum Concurrent**: Limited to 3 simultaneous duplications
+- **Queue System**: Additional requests are queued automatically
+- **Visual Indicator**: Real-time counter shows active duplications (0/3 max)
+- **User Feedback**: Clear messages when limits are reached
+
+#### 📊 **Performance Benefits**
+- **API Protection**: Prevents Power BI API overload
+- **Memory Management**: Reduces memory consumption during bulk operations
+- **Error Reduction**: Fewer QueryUserErrors due to controlled load
+- **System Stability**: Maintains responsive UI during heavy operations
+
+#### Usage Instructions
+1. **Normal Operation**: Duplicate reports as usual - system manages load automatically
+2. **High Load**: When 3 duplications are active, additional requests are queued
+3. **Visual Feedback**: Monitor the "Active Duplications" counter in the metrics panel
+4. **Error Recovery**: Use "Clear All" to reset if system gets stuck
 
 ### Singleton Service Architecture
 

@@ -5,6 +5,8 @@ import React, { useEffect, useRef, useState, useCallback } from "react";
 import { service, factories, Report } from "powerbi-client";
 import { IReportEmbedConfiguration } from "powerbi-models";
 import { powerBIService } from "../services/PowerBIService";
+import { powerBIErrorHandler } from "../services/PowerBIErrorHandler";
+import { PowerBIToolbar } from "./PowerBIToolbar";
 
 interface EmbeddedPowerBIContainerProps {
   reportId: string;
@@ -24,6 +26,8 @@ interface EmbeddedPowerBIContainerProps {
   };
   className?: string;
   showLoadingState?: boolean;
+  showToolbar?: boolean;
+  reportName?: string;
 }
 
 // Global state for concurrent load management
@@ -67,6 +71,8 @@ export const EmbeddedPowerBIContainer: React.FC<
   resourceOptimization = {},
   className = "",
   showLoadingState = true,
+  showToolbar = false, // Disable custom toolbar to avoid duplication with Power BI native toolbar
+  reportName = "PowerBI Report",
 }) => {
   // React container - only holds the detached PowerBI element
   const wrapperRef = useRef<HTMLDivElement>(null);
@@ -281,6 +287,7 @@ export const EmbeddedPowerBIContainer: React.FC<
           },
           bars: {
             statusBar: { visible: false },
+            actionBar: { visible: true }, // Enable the built-in action bar
           },
           // Apply resource optimizations
           ...(resourceOptimization.disableAnimations && {
@@ -331,61 +338,47 @@ export const EmbeddedPowerBIContainer: React.FC<
       });
 
       report.on("error", (event: any) => {
-        const errorDetails = {
-          message: event?.detail?.message || event?.message || 'Unknown error',
-          code: event?.detail?.errorCode || event?.errorCode || 'UNKNOWN',
-          detail: event?.detail || event,
-          reportId: reportId
-        };
-        console.error(`❌ Enhanced PowerBI error for ${reportId}:`, errorDetails);
+        const parsedError = powerBIErrorHandler.parseError(event, reportId);
+        const userFriendlyMessage = powerBIErrorHandler.getUserFriendlyMessage(parsedError);
         
-        // More specific error message based on error code/type
-        let userFriendlyError = "Enhanced PowerBI embedding error occurred";
-        if (errorDetails.code?.includes('TokenExpired') || errorDetails.message?.includes('token')) {
-          userFriendlyError = "Access token expired or invalid - please refresh the page";
-        } else if (errorDetails.code?.includes('NotFound') || errorDetails.message?.includes('not found')) {
-          userFriendlyError = "Report not found or access denied";
-        } else if (errorDetails.code?.includes('Unauthorized') || errorDetails.message?.includes('unauthorized')) {
-          userFriendlyError = "Unauthorized access to report";
-        } else if (errorDetails.code?.includes('QueryUserError') || errorDetails.message?.includes('QueryUserError')) {
-          userFriendlyError = "Power BI query error - this may be due to token expiration, rate limiting, or permissions issue. Try refreshing the page or reducing concurrent reports.";
+        console.error(`❌ Enhanced PowerBI error for ${reportId}:`, parsedError);
+        
+        // Check if this error should be retried automatically
+        if (powerBIErrorHandler.shouldRetry(parsedError, reportId)) {
+          console.log(`🔄 Auto-retry available for ${parsedError.code} on ${reportId}`);
           
-          // If this is a duplicate report (ID contains 'duplicate'), implement retry logic
-          if (reportId.includes('duplicate')) {
-            console.log(`🔄 QueryUserError detected for duplicate report ${reportId}, will retry with delay...`);
-            
-            // Clear current error state and retry after delay
-            setTimeout(async () => {
-              try {
-                console.log(`🔄 Retrying duplicate report ${reportId} after QueryUserError...`);
-                
-                // Clear the container and try to re-embed with a delay
-                if (detachedContainerRef.current) {
-                  detachedContainerRef.current.innerHTML = '';
-                }
-                
-                // Add extra delay for retries
-                await new Promise(resolve => setTimeout(resolve, 2000));
-                
-                // Retry the embed
-                embedReport();
-              } catch (retryError) {
-                console.error(`❌ Retry failed for ${reportId}:`, retryError);
+          // For QueryUserError on duplicate reports, implement retry logic
+          if (parsedError.code.includes('QueryUserError') && reportId.includes('duplicate')) {
+            powerBIErrorHandler.executeRetry(parsedError, reportId, async () => {
+              console.log(`🔄 Auto-retrying duplicate report ${reportId} after QueryUserError...`);
+              
+              // Clear the container and try to re-embed with a delay
+              if (detachedContainerRef.current) {
+                detachedContainerRef.current.innerHTML = '';
               }
-            }, 3000); // 3 second delay before retry
+              
+              // Add extra delay for retries
+              await new Promise(resolve => setTimeout(resolve, 2000));
+              
+              // Retry the embed
+              embedReport();
+              return true;
+            }).catch(retryError => {
+              console.error(`❌ Auto-retry failed for ${reportId}:`, retryError);
+              setHasError(userFriendlyMessage);
+            });
+          } else {
+            setHasError(userFriendlyMessage);
           }
-        } else if (errorDetails.code?.includes('RateLimited') || errorDetails.message?.includes('rate')) {
-          userFriendlyError = "Too many requests - please wait a moment before trying again";
         } else {
-          userFriendlyError = errorDetails.message || "Enhanced PowerBI embedding error occurred";
+          setHasError(userFriendlyMessage);
         }
         
-        setHasError(userFriendlyError);
         setIsLoading(false);
         isEmbeddingRef.current = false;
         globalActiveLoads = Math.max(0, globalActiveLoads - 1);
-        processLoadQueue(); // Process any queued loads
-        onErrorRef.current?.(errorDetails);
+        processLoadQueue();
+        onErrorRef.current?.(parsedError);
       });
 
       if (wrapperRef.current) {
@@ -439,18 +432,28 @@ export const EmbeddedPowerBIContainer: React.FC<
 
   return (
     <div className={`enhanced-powerbi-embed ${className} priority-${priority}`}>
-      {showLoadingState && (
-        <div className="enhanced-powerbi-header">
-          <h4>🚀 Enhanced PowerBI Embed</h4>
-          <div className="enhanced-powerbi-info">
-            <span>Priority: {priority.toUpperCase()}</span>
-            <span>Lazy: {lazyLoad ? "Yes" : "No"}</span>
-            <span>
-              Active: {globalActiveLoads}/{maxConcurrentLoads}
-            </span>
-            <span>Queue: {loadQueue.length}</span>
-          </div>
-        </div>
+      {/* PowerBI Toolbar */}
+      {showToolbar && (
+        <PowerBIToolbar
+          report={reportRef.current}
+          reportId={reportId}
+          reportName={reportName}
+          containerId={instanceId.current}
+          onError={(error) => {
+            setHasError(error);
+            onErrorRef.current?.(error);
+          }}
+          onReportReload={() => {
+            console.log('🔧 Reloading report due to user request...');
+            cleanup();
+            setHasError(null);
+            // Force re-embed after cleanup
+            setTimeout(() => {
+              setShouldLoad(true);
+              embedReport();
+            }, 500);
+          }}
+        />
       )}
 
       {isLoading && showLoadingState && (
@@ -474,6 +477,7 @@ export const EmbeddedPowerBIContainer: React.FC<
       )}
 
       <div
+        id={instanceId.current}
         ref={wrapperRef}
         className="enhanced-powerbi-wrapper"
         style={{
@@ -482,24 +486,13 @@ export const EmbeddedPowerBIContainer: React.FC<
             typeof height === "number" ? `${height}px` : height.toString(),
           backgroundColor: "#f5f5f5",
           border: `2px solid ${getPriorityColor()}`,
-          borderRadius: "4px",
+          borderRadius: showToolbar ? "0 0 4px 4px" : "4px",
+          borderTop: showToolbar ? "none" : `2px solid ${getPriorityColor()}`,
           position: "relative",
           overflow: "hidden",
         }}
         data-priority={priority}
       />
-
-      {showLoadingState && (
-        <div className="enhanced-powerbi-footer">
-          <p>🛡️ Enhanced DOM Protection with {priority} priority loading</p>
-          <div className="enhanced-powerbi-actions">
-            <button onClick={embedReport} disabled={isLoading}>
-              {isLoading ? "⏳ Loading..." : "🔄 Re-embed"}
-            </button>
-            <button onClick={cleanup}>🧹 Cleanup</button>
-          </div>
-        </div>
-      )}
     </div>
   );
 };

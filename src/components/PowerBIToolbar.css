@@ -1,0 +1,135 @@
+/* Simplified PowerBI Toolbar Styles */
+.powerbi-toolbar-simple {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  background: #2d3748;
+  color: white;
+  padding: 8px 16px;
+  border-radius: 6px 6px 0 0;
+  font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', sans-serif;
+  font-size: 14px;
+  min-height: 40px;
+}
+
+.toolbar-actions {
+  display: flex;
+  gap: 8px;
+  align-items: center;
+}
+
+.toolbar-btn {
+  background: rgba(255, 255, 255, 0.1);
+  border: 1px solid rgba(255, 255, 255, 0.2);
+  color: white;
+  padding: 6px 12px;
+  border-radius: 4px;
+  cursor: pointer;
+  font-size: 14px;
+  transition: all 0.2s ease;
+  display: flex;
+  align-items: center;
+  gap: 4px;
+}
+
+.toolbar-btn:hover:not(:disabled) {
+  background: rgba(255, 255, 255, 0.2);
+  transform: translateY(-1px);
+}
+
+.toolbar-btn:disabled {
+  opacity: 0.5;
+  cursor: not-allowed;
+}
+
+.toolbar-btn.active {
+  background: #4299e1;
+  border-color: #3182ce;
+}
+
+.bookmark-section {
+  position: relative;
+}
+
+.bookmark-dropdown-simple {
+  position: absolute;
+  top: 100%;
+  right: 0;
+  background: white;
+  color: #2d3748;
+  border-radius: 4px;
+  box-shadow: 0 4px 12px rgba(0, 0, 0, 0.15);
+  min-width: 200px;
+  max-height: 200px;
+  overflow-y: auto;
+  z-index: 1000;
+  margin-top: 4px;
+  border: 1px solid #e2e8f0;
+}
+
+.bookmark-item-simple {
+  display: block;
+  width: 100%;
+  padding: 8px 12px;
+  background: none;
+  border: none;
+  text-align: left;
+  cursor: pointer;
+  color: #2d3748;
+  font-size: 13px;
+  transition: background-color 0.2s ease;
+}
+
+.bookmark-item-simple:hover:not(:disabled) {
+  background: #f7fafc;
+}
+
+.bookmark-item-simple:disabled {
+  opacity: 0.5;
+  cursor: not-allowed;
+}
+
+.toolbar-info {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  color: #cbd5e0;
+  font-size: 12px;
+}
+
+.loading-simple {
+  animation: spin 1s linear infinite;
+}
+
+@keyframes spin {
+  from { transform: rotate(0deg); }
+  to { transform: rotate(360deg); }
+}
+
+.report-name {
+  max-width: 200px;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+/* Mobile responsive */
+@media (max-width: 768px) {
+  .powerbi-toolbar-simple {
+    padding: 6px 12px;
+    font-size: 12px;
+  }
+  
+  .toolbar-btn {
+    padding: 4px 8px;
+    font-size: 12px;
+  }
+  
+  .report-name {
+    max-width: 100px;
+  }
+  
+  .bookmark-dropdown-simple {
+    min-width: 150px;
+  }
+}

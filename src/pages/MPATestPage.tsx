@@ -519,6 +519,8 @@ const MPATestPage: React.FC = () => {
           embedUrl={report.embedUrl}
           accessToken={report.accessToken}
           reportId={report.powerBiReportId || report.id}
+          reportName={report.name}
+          showToolbar={true}
           onLoaded={(reportInstance) =>
             handleReportLoaded(report.id, report.priority, report.lazyLoad)
           }
