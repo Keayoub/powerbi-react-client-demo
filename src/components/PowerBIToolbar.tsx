@@ -24,23 +24,12 @@ export const PowerBIToolbar: React.FC<PowerBIToolbarProps> = ({
   onError,
   onReportReload
 }) => {
-  const [isFullscreen, setIsFullscreen] = useState(false);
   const [showBookmarks, setShowBookmarks] = useState(false);
   const [availableBookmarks, setAvailableBookmarks] = useState<any[]>([]);
   const [isLoading, setIsLoading] = useState(false);
   const [lastError, setLastError] = useState<PowerBIError | null>(null);
   const [isRetrying, setIsRetrying] = useState(false);
   const [retryCount, setRetryCount] = useState(0);
-
-  // Handle fullscreen changes
-  useEffect(() => {
-    const handleFullscreenChange = () => {
-      setIsFullscreen(!!document.fullscreenElement);
-    };
-
-    document.addEventListener('fullscreenchange', handleFullscreenChange);
-    return () => document.removeEventListener('fullscreenchange', handleFullscreenChange);
-  }, []);
 
   // Load bookmarks when report changes
   useEffect(() => {
@@ -176,15 +165,12 @@ export const PowerBIToolbar: React.FC<PowerBIToolbarProps> = ({
   };
 
   const handleFullscreen = async () => {
-    try {
-      const container = document.getElementById(containerId);
-      if (!container) return;
+    if (!report) return;
 
-      if (!isFullscreen) {
-        await container.requestFullscreen();
-      } else {
-        await document.exitFullscreen();
-      }
+    try {
+      // Use Power BI's native fullscreen functionality instead of browser fullscreen
+      await report.fullscreen();
+      console.log('✅ Power BI report entered fullscreen mode');
     } catch (error) {
       console.error('Fullscreen error:', error);
       await handleError(error, 'Fullscreen Toggle');
@@ -283,13 +269,12 @@ export const PowerBIToolbar: React.FC<PowerBIToolbarProps> = ({
 
       <div className="toolbar-actions">
         <button
-          className={`toolbar-btn ${isFullscreen ? 'active' : ''}`}
+          className="toolbar-btn"
           onClick={handleFullscreen}
-          disabled={isLoading}
-          title={isFullscreen ? 'Exit Fullscreen' : 'Enter Fullscreen'}
+          disabled={isLoading || !report}
+          title="Enter Fullscreen"
         >
-          {isFullscreen ? '⛶' : '⛶'}
-          <span>Full</span>
+          ⛶ <span>Full</span>
         </button>
 
         <button
