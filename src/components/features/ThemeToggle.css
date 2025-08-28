@@ -1,0 +1,214 @@
+/* ThemeToggle.css */
+
+.theme-toggle {
+    display: flex;
+    align-items: center;
+}
+
+.theme-options {
+    display: flex;
+    background: var(--bg-secondary, #f8f9fa);
+    border-radius: 8px;
+    padding: 4px;
+    border: 1px solid var(--border-color, #e9ecef);
+}
+
+.theme-option {
+    display: flex;
+    align-items: center;
+    gap: 6px;
+    padding: 6px 12px;
+    border: none;
+    background: transparent;
+    border-radius: 6px;
+    cursor: pointer;
+    transition: all 0.2s ease;
+    font-size: 12px;
+    color: var(--text-secondary, #666);
+    white-space: nowrap;
+}
+
+.theme-option:hover {
+    background: var(--bg-hover, #e9ecef);
+    color: var(--text-primary, #333);
+}
+
+.theme-option.active {
+    background: var(--primary-color, #667eea);
+    color: white;
+    box-shadow: 0 2px 4px rgba(102, 126, 234, 0.2);
+}
+
+.theme-icon {
+    font-size: 14px;
+}
+
+.theme-label {
+    font-weight: 500;
+}
+
+/* Compact version for smaller spaces */
+.theme-toggle.compact .theme-label {
+    display: none;
+}
+
+.theme-toggle.compact .theme-option {
+    padding: 8px;
+    min-width: 36px;
+    justify-content: center;
+}
+
+/* Enhanced Light theme variables */
+:root,
+[data-theme="light"] {
+    --bg-primary: #ffffff;
+    --bg-secondary: #f8fafc;
+    --bg-tertiary: #f1f5f9;
+    --bg-hover: #e2e8f0;
+    --bg-accent: #dbeafe;
+    --text-primary: #1e293b;
+    --text-secondary: #64748b;
+    --text-muted: #94a3b8;
+    --border-color: #e2e8f0;
+    --border-light: #f1f5f9;
+    --primary-color: #3b82f6;
+    --primary-dark: #2563eb;
+    --primary-light: #60a5fa;
+    --success-color: #10b981;
+    --warning-color: #f59e0b;
+    --error-color: #ef4444;
+    --info-color: #06b6d4;
+    --shadow: rgba(0, 0, 0, 0.1);
+    --shadow-lg: rgba(0, 0, 0, 0.15);
+    --gradient-primary: linear-gradient(135deg, #3b82f6 0%, #8b5cf6 100%);
+    --gradient-secondary: linear-gradient(135deg, #06b6d4 0%, #3b82f6 100%);
+}
+
+/* Enhanced Dark theme variables */
+[data-theme="dark"] {
+    --bg-primary: #0f172a;
+    --bg-secondary: #1e293b;
+    --bg-tertiary: #334155;
+    --bg-hover: #475569;
+    --bg-accent: #1e3a8a;
+    --text-primary: #f8fafc;
+    --text-secondary: #cbd5e1;
+    --text-muted: #94a3b8;
+    --border-color: #334155;
+    --border-light: #475569;
+    --primary-color: #60a5fa;
+    --primary-dark: #3b82f6;
+    --primary-light: #93c5fd;
+    --success-color: #34d399;
+    --warning-color: #fbbf24;
+    --error-color: #f87171;
+    --info-color: #22d3ee;
+    --shadow: rgba(0, 0, 0, 0.4);
+    --shadow-lg: rgba(0, 0, 0, 0.6);
+    --gradient-primary: linear-gradient(135deg, #60a5fa 0%, #a78bfa 100%);
+    --gradient-secondary: linear-gradient(135deg, #22d3ee 0%, #60a5fa 100%);
+}
+
+/* Apply theme to body and common elements */
+body {
+    background-color: var(--bg-primary);
+    color: var(--text-primary);
+    transition: background-color 0.3s ease, color 0.3s ease;
+}
+
+/* PowerBI embed container theming */
+.powerbi-embed-container {
+    background-color: var(--bg-secondary);
+    border: 1px solid var(--border-color);
+    border-radius: 8px;
+}
+
+/* Update existing components to use theme variables */
+.report-viewer-page {
+    background-color: var(--bg-primary);
+    color: var(--text-primary);
+}
+
+.configuration-page {
+    background-color: var(--bg-primary);
+    color: var(--text-primary);
+}
+
+.workspace-browser {
+    background-color: var(--bg-secondary);
+    border: 1px solid var(--border-color);
+}
+
+.report-item {
+    background-color: var(--bg-primary);
+    border: 1px solid var(--border-color);
+    color: var(--text-primary);
+}
+
+.report-item:hover {
+    background-color: var(--bg-hover);
+}
+
+/* Button theming */
+button {
+    transition: background-color 0.2s ease, color 0.2s ease, border-color 0.2s ease;
+}
+
+.primary-action {
+    background: var(--primary-color);
+    color: white;
+    border: 1px solid var(--primary-color);
+}
+
+.secondary-action {
+    background: var(--bg-secondary);
+    color: var(--text-primary);
+    border: 1px solid var(--border-color);
+}
+
+.secondary-action:hover {
+    background: var(--bg-hover);
+}
+
+/* Input theming */
+input,
+select,
+textarea {
+    background-color: var(--bg-primary);
+    color: var(--text-primary);
+    border: 1px solid var(--border-color);
+}
+
+input:focus,
+select:focus,
+textarea:focus {
+    border-color: var(--primary-color);
+    box-shadow: 0 0 0 3px rgba(102, 126, 234, 0.1);
+}
+
+/* Auto theme media query */
+@media (prefers-color-scheme: dark) {
+    .theme-auto {
+        --bg-primary: #1a1a1a;
+        --bg-secondary: #2d2d2d;
+        --bg-hover: #404040;
+        --text-primary: #f8f9fa;
+        --text-secondary: #adb5bd;
+        --border-color: #495057;
+        --primary-color: #667eea;
+        --shadow: rgba(0, 0, 0, 0.3);
+    }
+}
+
+@media (prefers-color-scheme: light) {
+    .theme-auto {
+        --bg-primary: #ffffff;
+        --bg-secondary: #f8f9fa;
+        --bg-hover: #e9ecef;
+        --text-primary: #212529;
+        --text-secondary: #6c757d;
+        --border-color: #dee2e6;
+        --primary-color: #667eea;
+        --shadow: rgba(0, 0, 0, 0.1);
+    }
+}

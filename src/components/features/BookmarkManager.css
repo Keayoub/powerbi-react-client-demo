@@ -1,0 +1,258 @@
+/* BookmarkManager.css */
+
+.bookmark-manager-overlay {
+    position: fixed;
+    top: 0;
+    left: 0;
+    right: 0;
+    bottom: 0;
+    background-color: rgba(0, 0, 0, 0.7);
+    display: flex;
+    justify-content: center;
+    align-items: center;
+    z-index: 1000;
+}
+
+.bookmark-manager {
+    background: white;
+    border-radius: 12px;
+    box-shadow: 0 10px 30px rgba(0, 0, 0, 0.3);
+    width: 90%;
+    max-width: 600px;
+    max-height: 80vh;
+    overflow: hidden;
+    display: flex;
+    flex-direction: column;
+}
+
+.bookmark-header {
+    background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+    color: white;
+    padding: 20px;
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+}
+
+.bookmark-header h3 {
+    margin: 0;
+    font-size: 1.2rem;
+    font-weight: 600;
+}
+
+.close-button {
+    background: rgba(255, 255, 255, 0.2);
+    border: none;
+    color: white;
+    border-radius: 50%;
+    width: 32px;
+    height: 32px;
+    cursor: pointer;
+    font-size: 16px;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    transition: background-color 0.2s;
+}
+
+.close-button:hover {
+    background: rgba(255, 255, 255, 0.3);
+}
+
+.bookmark-content {
+    flex: 1;
+    overflow-y: auto;
+    padding: 20px;
+}
+
+.bookmark-section {
+    margin-bottom: 24px;
+}
+
+.bookmark-section h4 {
+    margin: 0 0 12px 0;
+    color: #333;
+    font-size: 1.1rem;
+    font-weight: 600;
+    padding-bottom: 8px;
+    border-bottom: 2px solid #f0f0f0;
+}
+
+.bookmark-create {
+    display: flex;
+    gap: 12px;
+    margin-bottom: 16px;
+}
+
+.bookmark-create input {
+    flex: 1;
+    padding: 12px;
+    border: 2px solid #e0e0e0;
+    border-radius: 8px;
+    font-size: 14px;
+    transition: border-color 0.2s;
+}
+
+.bookmark-create input:focus {
+    outline: none;
+    border-color: #667eea;
+}
+
+.capture-button {
+    background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+    color: white;
+    border: none;
+    padding: 12px 20px;
+    border-radius: 8px;
+    cursor: pointer;
+    font-weight: 600;
+    transition: transform 0.2s, box-shadow 0.2s;
+    white-space: nowrap;
+}
+
+.capture-button:hover:not(:disabled) {
+    transform: translateY(-2px);
+    box-shadow: 0 4px 12px rgba(102, 126, 234, 0.4);
+}
+
+.capture-button:disabled {
+    opacity: 0.6;
+    cursor: not-allowed;
+}
+
+.bookmark-list {
+    display: flex;
+    flex-direction: column;
+    gap: 8px;
+}
+
+.bookmark-item {
+    background: #f8f9fa;
+    border: 2px solid #e9ecef;
+    border-radius: 8px;
+    padding: 12px;
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    transition: all 0.2s;
+}
+
+.bookmark-item:hover {
+    background: #e9ecef;
+    border-color: #667eea;
+}
+
+.bookmark-item.selected {
+    background: #e8f2ff;
+    border-color: #667eea;
+    box-shadow: 0 2px 8px rgba(102, 126, 234, 0.2);
+}
+
+.bookmark-info {
+    flex: 1;
+    display: flex;
+    flex-direction: column;
+    gap: 4px;
+}
+
+.bookmark-name {
+    font-weight: 600;
+    color: #333;
+    font-size: 14px;
+}
+
+.bookmark-date,
+.bookmark-type {
+    font-size: 12px;
+    color: #666;
+}
+
+.bookmark-type {
+    background: #e0e7ff;
+    color: #4338ca;
+    padding: 2px 8px;
+    border-radius: 12px;
+    display: inline-block;
+    width: fit-content;
+}
+
+.bookmark-actions {
+    display: flex;
+    gap: 8px;
+}
+
+.bookmark-actions button {
+    background: none;
+    border: 2px solid transparent;
+    border-radius: 6px;
+    cursor: pointer;
+    padding: 6px 8px;
+    font-size: 14px;
+    transition: all 0.2s;
+    min-width: 32px;
+    height: 32px;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+}
+
+.apply-button:hover {
+    background: #e3f2fd;
+    border-color: #1976d2;
+}
+
+.favorite-button:hover {
+    background: #fff3e0;
+    border-color: #f57c00;
+}
+
+.favorite-button.active {
+    background: #fff3e0;
+    border-color: #f57c00;
+    color: #f57c00;
+}
+
+.delete-button:hover {
+    background: #ffebee;
+    border-color: #d32f2f;
+}
+
+.no-bookmarks {
+    text-align: center;
+    padding: 40px 20px;
+    color: #666;
+}
+
+.no-bookmarks p {
+    margin: 8px 0;
+}
+
+/* Responsive Design */
+@media (max-width: 768px) {
+    .bookmark-manager {
+        width: 95%;
+        max-height: 90vh;
+    }
+    
+    .bookmark-header {
+        padding: 16px;
+    }
+    
+    .bookmark-content {
+        padding: 16px;
+    }
+    
+    .bookmark-create {
+        flex-direction: column;
+    }
+    
+    .bookmark-item {
+        flex-direction: column;
+        align-items: stretch;
+        gap: 12px;
+    }
+    
+    .bookmark-actions {
+        justify-content: center;
+    }
+}

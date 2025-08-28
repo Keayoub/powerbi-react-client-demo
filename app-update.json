@@ -1,0 +1,12 @@
+{
+  "spa": {
+    "redirectUris": ["https://localhost:9000"]
+  },
+  "web": {
+    "redirectUris": [],
+    "implicitGrantSettings": {
+      "enableAccessTokenIssuance": true,
+      "enableIdTokenIssuance": true
+    }
+  }
+}

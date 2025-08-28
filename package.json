@@ -1,0 +1,37 @@
+{
+	"name": "powerbi-client-react-demo",
+	"version": "1.1.0",
+	"description": "Demo for usage of powerbi-client-react",
+	"scripts": {
+		"demo": "webpack serve"
+	},
+	"license": "MIT",
+	"dependencies": {
+		"@azure/msal-browser": "^4.21.0",
+		"@azure/msal-react": "^3.0.19",
+		"@fluentui/web-components": "^2.6.1",
+		"@microsoft/fast-react-wrapper": "^0.3.24",
+		"@types/react-router-dom": "^5.3.3",
+		"powerbi-client-react": "^2.0.0",
+		"powerbi-report-authoring": "^2.0.0",
+		"process": "^0.11.10",
+		"react-app-polyfill": "^3.0.0",
+		"react-router-dom": "^7.8.2"
+	},
+	"peerDependencies": {
+		"react": ">= 18"
+	},
+	"devDependencies": {
+		"@types/react": "^18.3.10",
+		"@types/react-dom": "^18.3.0",
+		"css-loader": "^6.8.1",
+		"react": "^18.3.1",
+		"react-dom": "^18.3.1",
+		"style-loader": "^3.3.3",
+		"ts-loader": "^9.4.2",
+		"typescript": "^5.2.2",
+		"webpack": "^5.88.2",
+		"webpack-cli": "^5.1.4",
+		"webpack-dev-server": "^4.15.1"
+	}
+}

@@ -1,0 +1,9 @@
+/* App Router Styles */
+.app-router {
+    min-height: 100vh;
+    background: #f8f9fa;
+}
+
+.main-content {
+    min-height: calc(100vh - 60px);
+}

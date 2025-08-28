@@ -1,0 +1,85 @@
+/* Session Status Component Styles */
+
+.session-status {
+    display: flex;
+    flex-direction: column;
+    gap: 4px;
+    padding: 8px 12px;
+    border-radius: 6px;
+    font-size: 12px;
+    font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', 'Roboto', sans-serif;
+    border: 1px solid transparent;
+    background: rgba(255, 255, 255, 0.05);
+    color: #ffffff;
+    min-width: 180px;
+}
+
+.session-status.loading {
+    border-color: #ffa500;
+    background: rgba(255, 165, 0, 0.1);
+    color: #ffa500;
+}
+
+.session-status.not-authenticated {
+    border-color: #ff6b6b;
+    background: rgba(255, 107, 107, 0.1);
+    color: #ff6b6b;
+}
+
+.session-status.authenticated {
+    border-color: #51cf66;
+    background: rgba(81, 207, 102, 0.1);
+    color: #51cf66;
+}
+
+.user-info {
+    display: flex;
+    align-items: center;
+    gap: 6px;
+}
+
+.status-indicator {
+    font-size: 10px;
+    display: inline-block;
+    min-width: 12px;
+}
+
+.user-name {
+    font-weight: 500;
+    white-space: nowrap;
+    overflow: hidden;
+    text-overflow: ellipsis;
+    max-width: 140px;
+}
+
+.token-info {
+    padding-left: 18px;
+    opacity: 0.8;
+}
+
+.token-status {
+    font-size: 10px;
+    font-style: italic;
+}
+
+/* Loading animation */
+.session-status.loading .status-indicator {
+    animation: spin 1s linear infinite;
+}
+
+@keyframes spin {
+    from { transform: rotate(0deg); }
+    to { transform: rotate(360deg); }
+}
+
+/* Responsive adjustments */
+@media (max-width: 768px) {
+    .session-status {
+        min-width: 150px;
+        font-size: 11px;
+    }
+    
+    .user-name {
+        max-width: 100px;
+    }
+}

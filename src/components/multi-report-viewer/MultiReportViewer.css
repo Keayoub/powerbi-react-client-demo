@@ -1,0 +1,378 @@
+/* Multi-Report Viewer Styles */
+
+.multi-report-viewer {
+    background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+    border-radius: 8px;
+    padding: 20px;
+    margin: 20px 0;
+    color: white;
+    font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', 'Roboto', sans-serif;
+    box-shadow: 0 4px 6px rgba(0, 0, 0, 0.1);
+}
+
+.multi-report-viewer.empty {
+    min-height: 200px;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+}
+
+.empty-state {
+    text-align: center;
+    max-width: 500px;
+}
+
+.empty-state h3 {
+    margin: 0 0 16px 0;
+    font-size: 1.5em;
+    color: white;
+}
+
+.empty-state p {
+    margin: 0 0 20px 0;
+    color: rgba(255, 255, 255, 0.8);
+    line-height: 1.5;
+}
+
+.empty-features {
+    display: flex;
+    flex-direction: column;
+    gap: 8px;
+    align-items: flex-start;
+}
+
+.feature {
+    font-size: 14px;
+    color: rgba(255, 255, 255, 0.9);
+    background: rgba(255, 255, 255, 0.1);
+    padding: 8px 12px;
+    border-radius: 6px;
+    width: 100%;
+}
+
+.viewer-header {
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    margin-bottom: 20px;
+    padding-bottom: 16px;
+    border-bottom: 1px solid rgba(255, 255, 255, 0.2);
+    flex-wrap: wrap;
+    gap: 16px;
+}
+
+.header-left h3 {
+    margin: 0;
+    font-size: 1.4em;
+    font-weight: 600;
+}
+
+.header-controls {
+    display: flex;
+    align-items: center;
+    gap: 16px;
+    flex-wrap: wrap;
+}
+
+.layout-controls, .grid-controls {
+    display: flex;
+    align-items: center;
+    gap: 8px;
+}
+
+.layout-controls label, .grid-controls label {
+    font-size: 14px;
+    color: rgba(255, 255, 255, 0.9);
+    font-weight: 500;
+}
+
+.layout-selector, .grid-selector {
+    background: rgba(255, 255, 255, 0.15);
+    border: 1px solid rgba(255, 255, 255, 0.3);
+    color: white;
+    padding: 6px 12px;
+    border-radius: 4px;
+    font-size: 14px;
+    cursor: pointer;
+}
+
+.layout-selector:focus, .grid-selector:focus {
+    outline: none;
+    border-color: rgba(255, 255, 255, 0.5);
+}
+
+.clear-all-button {
+    background: rgba(220, 38, 38, 0.2);
+    border: 1px solid rgba(220, 38, 38, 0.4);
+    color: #fca5a5;
+    padding: 8px 16px;
+    border-radius: 6px;
+    cursor: pointer;
+    font-size: 14px;
+    transition: all 0.2s ease;
+}
+
+.clear-all-button:hover {
+    background: rgba(220, 38, 38, 0.3);
+    color: white;
+    transform: translateY(-1px);
+}
+
+/* Tabs Layout */
+.tabs-layout {
+    display: flex;
+    flex-direction: column;
+    height: 600px;
+}
+
+.tab-headers {
+    display: flex;
+    gap: 4px;
+    margin-bottom: 16px;
+    overflow-x: auto;
+    padding-bottom: 8px;
+}
+
+.tab-header {
+    background: rgba(255, 255, 255, 0.1);
+    border: 1px solid rgba(255, 255, 255, 0.2);
+    color: rgba(255, 255, 255, 0.8);
+    padding: 10px 16px;
+    border-radius: 6px 6px 0 0;
+    cursor: pointer;
+    transition: all 0.2s ease;
+    display: flex;
+    align-items: center;
+    gap: 8px;
+    min-width: 200px;
+    position: relative;
+}
+
+.tab-header:hover {
+    background: rgba(255, 255, 255, 0.15);
+    color: white;
+}
+
+.tab-header.active {
+    background: rgba(255, 255, 255, 0.2);
+    border-bottom: 1px solid transparent;
+    color: white;
+    font-weight: 600;
+}
+
+.tab-title {
+    font-size: 14px;
+    white-space: nowrap;
+    overflow: hidden;
+    text-overflow: ellipsis;
+    flex: 1;
+}
+
+.tab-workspace {
+    font-size: 11px;
+    color: rgba(255, 255, 255, 0.6);
+}
+
+.tab-close {
+    background: none;
+    border: none;
+    color: rgba(255, 255, 255, 0.6);
+    font-size: 16px;
+    cursor: pointer;
+    padding: 0;
+    width: 16px;
+    height: 16px;
+    border-radius: 50%;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    transition: all 0.2s ease;
+}
+
+.tab-close:hover {
+    background: rgba(220, 38, 38, 0.3);
+    color: white;
+}
+
+.tab-content {
+    flex: 1;
+    background: rgba(255, 255, 255, 0.05);
+    border-radius: 6px;
+    overflow: hidden;
+}
+
+.tab-panel {
+    display: none;
+    height: 100%;
+}
+
+.tab-panel.active {
+    display: block;
+}
+
+/* Grid Layout */
+.grid-layout {
+    display: grid;
+    gap: 16px;
+    min-height: 400px;
+}
+
+.grid-layout.columns-1 {
+    grid-template-columns: 1fr;
+}
+
+.grid-layout.columns-2 {
+    grid-template-columns: repeat(2, 1fr);
+}
+
+.grid-layout.columns-3 {
+    grid-template-columns: repeat(3, 1fr);
+}
+
+/* Stack Layout */
+.stack-layout {
+    display: flex;
+    flex-direction: column;
+    gap: 20px;
+}
+
+/* Report Panel */
+.report-panel {
+    background: rgba(255, 255, 255, 0.05);
+    border-radius: 8px;
+    overflow: hidden;
+    border: 1px solid rgba(255, 255, 255, 0.1);
+    transition: all 0.3s ease;
+}
+
+.report-panel.collapsed {
+    height: auto;
+}
+
+.panel-header {
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    padding: 12px 16px;
+    background: rgba(255, 255, 255, 0.05);
+    border-bottom: 1px solid rgba(255, 255, 255, 0.1);
+}
+
+.panel-info {
+    flex: 1;
+}
+
+.report-title {
+    margin: 0 0 6px 0;
+    font-size: 16px;
+    font-weight: 600;
+    color: white;
+}
+
+.report-meta {
+    display: flex;
+    gap: 8px;
+    flex-wrap: wrap;
+}
+
+.workspace-tag, .dataset-tag, .type-tag {
+    font-size: 11px;
+    padding: 2px 6px;
+    border-radius: 8px;
+    font-weight: 500;
+}
+
+.workspace-tag {
+    background: rgba(59, 130, 246, 0.2);
+    color: #93c5fd;
+}
+
+.dataset-tag {
+    background: rgba(34, 197, 94, 0.2);
+    color: #86efac;
+}
+
+.type-tag {
+    background: rgba(251, 191, 36, 0.2);
+    color: #fcd34d;
+}
+
+.panel-controls {
+    display: flex;
+    gap: 8px;
+}
+
+.expand-button, .remove-button {
+    background: rgba(255, 255, 255, 0.1);
+    border: 1px solid rgba(255, 255, 255, 0.2);
+    color: rgba(255, 255, 255, 0.8);
+    padding: 6px 8px;
+    border-radius: 4px;
+    cursor: pointer;
+    font-size: 12px;
+    transition: all 0.2s ease;
+}
+
+.expand-button:hover {
+    background: rgba(255, 255, 255, 0.15);
+    color: white;
+}
+
+.remove-button:hover {
+    background: rgba(220, 38, 38, 0.3);
+    color: #fca5a5;
+}
+
+.panel-content {
+    height: 500px;
+    background: white;
+}
+
+.powerbi-frame {
+    width: 100%;
+    height: 100%;
+    border: none;
+}
+
+/* Responsive Design */
+@media (max-width: 1200px) {
+    .grid-layout.columns-3 {
+        grid-template-columns: repeat(2, 1fr);
+    }
+}
+
+@media (max-width: 768px) {
+    .multi-report-viewer {
+        padding: 16px;
+        margin: 16px 0;
+    }
+    
+    .viewer-header {
+        flex-direction: column;
+        align-items: stretch;
+    }
+    
+    .header-controls {
+        flex-direction: column;
+        align-items: stretch;
+        gap: 12px;
+    }
+    
+    .grid-layout.columns-2,
+    .grid-layout.columns-3 {
+        grid-template-columns: 1fr;
+    }
+    
+    .tab-headers {
+        flex-direction: column;
+    }
+    
+    .tab-header {
+        border-radius: 6px;
+        min-width: auto;
+    }
+    
+    .panel-content {
+        height: 400px;
+    }
+}
