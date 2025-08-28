@@ -1,18 +1,69 @@
 // Copyright (c) Microsoft Corporation.
 // Licensed under the MIT License.
 
-import React, { useState } from "react";
+import React, { useState, useEffect } from "react";
 import "./DemoApp.css";
 import { AuthProvider } from "./context/AuthContext";
 import { ReportSelectionPage } from "./components/ReportSelectionPage";
 import MPATestPage from "./pages/MPATestPage";
+import { ErrorDiagnostic } from "./components/ErrorDiagnostic";
+import { QueryUserErrorRecovery } from "./components/QueryUserErrorRecovery";
+import { PerformanceDashboard } from "./components/PerformanceDashboard";
 
 /**
- * Simplified PowerBI Demo Application
+ * Enhanced PowerBI Demo Application with Error Recovery
  * 2 main pages: Report Embed + MPA Test
+ * Features: QueryUserError recovery, Performance monitoring, Error diagnostics
  */
 function DemoAppContent() {
   const [activePage, setActivePage] = useState<"reports" | "mpa">("reports");
+  const [showQueryUserRecovery, setShowQueryUserRecovery] = useState(false);
+  const [showPerformanceDashboard, setShowPerformanceDashboard] = useState(false);
+  const [errorContext, setErrorContext] = useState<{
+    reportId: string;
+    embedUrl?: string;
+    accessToken?: string;
+  }>({ reportId: 'unknown' });
+
+  // Listen for QueryUserError events to show recovery modal
+  useEffect(() => {
+    const handleQueryUserError = (event: any) => {
+      console.warn('QueryUserError detected, showing recovery modal');
+      
+      // Extract error context from the event
+      const context = event.detail || {};
+      setErrorContext({
+        reportId: context.reportId || 'unknown-report',
+        embedUrl: context.embedUrl,
+        accessToken: context.accessToken
+      });
+      
+      setShowQueryUserRecovery(true);
+    };
+
+    // Listen for global error events
+    window.addEventListener('powerbi-queryuser-error', handleQueryUserError);
+    
+    return () => {
+      window.removeEventListener('powerbi-queryuser-error', handleQueryUserError);
+    };
+  }, []);
+
+  const handleRetry = (newConfig: {
+    reportId: string;
+    embedUrl: string;
+    accessToken: string;
+  }) => {
+    console.log('Retrying with new config:', newConfig);
+    
+    // Dispatch a retry event that other components can listen to
+    const retryEvent = new CustomEvent('powerbi-retry-config', {
+      detail: newConfig
+    });
+    window.dispatchEvent(retryEvent);
+    
+    setShowQueryUserRecovery(false);
+  };
 
   return (
     <div className="demo-app">
@@ -38,15 +89,52 @@ function DemoAppContent() {
             >
               ⚙️ Advanced Optimization & Singleton
             </button>
+            
+            {/* Enhanced Features Buttons */}
+            <button
+              className="nav-button enhanced-button"
+              onClick={() => setShowPerformanceDashboard(!showPerformanceDashboard)}
+              title="Toggle Performance Dashboard"
+            >
+              📊 Performance
+            </button>
           </nav>
         </div>
       </header>
+
+      {/* Performance Dashboard */}
+      {showPerformanceDashboard && (
+        <div className="performance-dashboard-overlay">
+          <div className="dashboard-container">
+            <button 
+              className="close-dashboard-btn"
+              onClick={() => setShowPerformanceDashboard(false)}
+              title="Close Performance Dashboard"
+            >
+              ✕
+            </button>
+            <PerformanceDashboard />
+          </div>
+        </div>
+      )}
 
       {/* Page Content */}
       <main className="app-content">
         {activePage === "reports" && <ReportSelectionPage />}
         {activePage === "mpa" && <MPATestPage />}
       </main>
+
+      {/* QueryUserError Recovery Modal */}
+      {showQueryUserRecovery && (
+        <QueryUserErrorRecovery 
+          reportId={errorContext.reportId}
+          onRetry={handleRetry}
+          onDismiss={() => setShowQueryUserRecovery(false)}
+        />
+      )}
+
+      {/* Error Diagnostic Panel */}
+      <ErrorDiagnostic />
 
       {/* Footer */}
       <footer className="demo-footer">

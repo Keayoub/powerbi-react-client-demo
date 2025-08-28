@@ -8,6 +8,7 @@ import { createRoot } from 'react-dom/client';
 import { MsalProvider } from '@azure/msal-react';
 import { msalInstance } from './context/AuthContext';
 import { AuthProvider } from './context/AuthContext';
+import EnhancedDemoApp from './EnhancedDemoApp';
 import DemoApp from './DemoApp';
 
 const container = document.getElementById('root');

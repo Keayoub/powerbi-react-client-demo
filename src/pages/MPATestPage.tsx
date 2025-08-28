@@ -890,6 +890,31 @@ const MPATestPage: React.FC = () => {
           </button>
           <button
             onClick={() => {
+              // Trigger QueryUserError for testing
+              const errorEvent = new CustomEvent('powerbi-queryuser-error', {
+                detail: {
+                  reportId: 'test-report-' + Date.now(),
+                  embedUrl: 'https://app.powerbi.com/reportEmbed',
+                  accessToken: 'test-token-expired',
+                  errorType: 'QueryUserError',
+                  message: 'Test QueryUserError for recovery system'
+                }
+              });
+              window.dispatchEvent(errorEvent);
+            }}
+            style={{
+              background: "#e74c3c",
+              color: "white",
+              border: "none",
+              padding: "10px 20px",
+              borderRadius: "4px",
+              cursor: "pointer",
+            }}
+          >
+            🚨 Test QueryUserError
+          </button>
+          <button
+            onClick={() => {
               const newMode = !serviceMetrics.singletonMode;
               powerBIService.setSingletonMode(newMode);
 

@@ -5,8 +5,11 @@
 
 import React, { useState, useEffect, Suspense, useMemo } from 'react';
 import { PerformanceDashboard } from './components/PerformanceDashboard';
+import { ErrorDiagnostic } from './components/ErrorDiagnostic';
+import { QueryUserErrorRecovery } from './components/QueryUserErrorRecovery';
 import { EnhancedPowerBIContainer, EnhancedVirtualPowerBIContainer, PowerBIOptimizationUtils } from './components/LazyPowerBIComponents';
 import { PowerBIPerformanceOptimizer } from './services/PowerBIPerformanceOptimizer';
+import { simulatePowerBIErrors, clearSimulatedErrors } from './utils/error-simulation';
 import './DemoApp.css';
 
 interface Report {
@@ -23,6 +26,7 @@ const EnhancedDemoApp: React.FC = () => {
   const [viewMode, setViewMode] = useState<'single' | 'virtual' | 'grid'>('single');
   const [performanceMode, setPerformanceMode] = useState<'standard' | 'optimized'>('optimized');
   const [showPerformanceDashboard, setShowPerformanceDashboard] = useState(true);
+  const [queryUserErrorReport, setQueryUserErrorReport] = useState<string | null>(null);
 
   // Initialize performance optimizer
   const performanceOptimizer = useMemo(() => {
@@ -70,6 +74,18 @@ const EnhancedDemoApp: React.FC = () => {
       serviceInstanceCount: 1,
       frameCount: sampleReports.length
     });
+
+    // Listen for QueryUserError events
+    const handleQueryUserError = (event: any) => {
+      console.log('🚨 QueryUserError event received:', event.detail);
+      setQueryUserErrorReport(event.detail.reportId);
+    };
+
+    window.addEventListener('queryUserError', handleQueryUserError);
+
+    return () => {
+      window.removeEventListener('queryUserError', handleQueryUserError);
+    };
   }, []);
 
   // Handle report load
@@ -111,6 +127,12 @@ const EnhancedDemoApp: React.FC = () => {
       window.updatePowerBIMetrics({
         errorCount: (JSON.parse(localStorage.getItem('powerBIMetrics') || '{}')).errorCount + 1 || 1
       });
+
+      // Check if this is a QueryUserError
+      if (error?.message?.includes('QueryUserError') || error?.type?.includes('QueryUserError')) {
+        console.log(`🚨 QueryUserError detected for report: ${reportId}`);
+        setQueryUserErrorReport(reportId);
+      }
     }
   };
 
@@ -219,6 +241,22 @@ const EnhancedDemoApp: React.FC = () => {
       {/* Performance Dashboard */}
       {showPerformanceDashboard && <PerformanceDashboard />}
 
+      {/* Error Diagnostic System */}
+      <ErrorDiagnostic
+        onRetryAll={() => {
+          // Retry all failed reports
+          reports.forEach(report => {
+            const event = new CustomEvent('retryReport', { 
+              detail: { reportId: report.reportId } 
+            });
+            window.dispatchEvent(event);
+          });
+        }}
+        onClearErrors={() => {
+          console.log('All errors cleared');
+        }}
+      />
+
       {/* Header with Controls */}
       <header className="app-header">
         <h1>🚀 Enhanced PowerBI Demo</h1>
@@ -293,6 +331,32 @@ const EnhancedDemoApp: React.FC = () => {
           {viewMode === 'grid' && renderGridView()}
         </Suspense>
       </main>
+
+      {/* QueryUserError Recovery Modal */}
+      {queryUserErrorReport && (
+        <QueryUserErrorRecovery
+          reportId={queryUserErrorReport}
+          onRetry={(newConfig) => {
+            console.log('🔄 Retrying with new configuration:', newConfig);
+            
+            // Update the report configuration
+            const updatedReports = reports.map(report => 
+              report.reportId === queryUserErrorReport 
+                ? { ...report, ...newConfig }
+                : report
+            );
+            setReports(updatedReports);
+            setAccessToken(newConfig.accessToken);
+            
+            // Close the modal
+            setQueryUserErrorReport(null);
+            
+            // Trigger a reload
+            window.location.reload();
+          }}
+          onDismiss={() => setQueryUserErrorReport(null)}
+        />
+      )}
 
       {/* Footer with Stats */}
       <footer className="app-footer">

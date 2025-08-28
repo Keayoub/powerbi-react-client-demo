@@ -206,6 +206,29 @@ export const OptimizedEmbeddedPowerBIContainer: React.FC<OptimizedEmbeddedPowerB
               `❌ Optimized PowerBI error for ${reportId}:`,
               parsedError
             );
+
+            // Add to global error diagnostic system
+            if (window.addPowerBIError) {
+              const severity = parsedError.message.includes('QueryUserError') ? 'high' : 
+                             parsedError.message.includes('TokenExpired') ? 'critical' : 
+                             parsedError.message.includes('Forbidden') ? 'high' : 'medium';
+
+              window.addPowerBIError({
+                type: (parsedError as any).errorCode || 'EmbedError',
+                message: userMessage,
+                reportId: reportId,
+                severity,
+                stack: (parsedError as any).stack || parsedError.message,
+                recoveryActions: [
+                  'Check PowerBI workspace permissions',
+                  'Verify access token is valid and not expired',
+                  'Ensure report ID exists and is accessible',
+                  'Try refreshing the authentication token',
+                  'Check network connectivity to PowerBI service'
+                ]
+              });
+            }
+
             setHasError(userMessage);
             setIsLoading(false);
             onErrorCallback(parsedError);

@@ -1,0 +1,449 @@
+/* QueryUserError Recovery Styles */
+
+.queryuser-error-recovery {
+  position: fixed;
+  top: 50%;
+  left: 50%;
+  transform: translate(-50%, -50%);
+  background: white;
+  border-radius: 16px;
+  box-shadow: 0 20px 60px rgba(0, 0, 0, 0.3);
+  width: 90%;
+  max-width: 600px;
+  max-height: 80vh;
+  overflow-y: auto;
+  z-index: 10002;
+  font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', 'Roboto', sans-serif;
+}
+
+.recovery-header {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  padding: 20px 24px;
+  background: linear-gradient(135deg, #dc2626 0%, #b91c1c 100%);
+  color: white;
+  border-radius: 16px 16px 0 0;
+}
+
+.recovery-header h2 {
+  margin: 0;
+  font-size: 18px;
+  font-weight: 600;
+}
+
+.close-button {
+  background: rgba(255, 255, 255, 0.2);
+  border: none;
+  color: white;
+  width: 32px;
+  height: 32px;
+  border-radius: 50%;
+  cursor: pointer;
+  font-size: 16px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  transition: background 0.2s;
+}
+
+.close-button:hover {
+  background: rgba(255, 255, 255, 0.3);
+}
+
+/* Progress Steps */
+.recovery-progress {
+  display: flex;
+  justify-content: space-between;
+  padding: 16px 24px;
+  background: #f8fafc;
+  border-bottom: 1px solid #e2e8f0;
+}
+
+.progress-step {
+  padding: 8px 16px;
+  border-radius: 20px;
+  font-size: 13px;
+  font-weight: 500;
+  color: #64748b;
+  background: #e2e8f0;
+  transition: all 0.3s;
+}
+
+.progress-step.active {
+  background: #3b82f6;
+  color: white;
+}
+
+.progress-step.completed {
+  background: #10b981;
+  color: white;
+}
+
+/* Recovery Content */
+.recovery-content {
+  padding: 24px;
+}
+
+.recovery-step h3 {
+  margin: 0 0 16px 0;
+  color: #1f2937;
+  font-size: 16px;
+  font-weight: 600;
+}
+
+/* Diagnosis Step */
+.diagnosis-result {
+  background: #fef2f2;
+  border: 1px solid #fecaca;
+  border-radius: 8px;
+  padding: 16px;
+}
+
+.issue-item {
+  display: flex;
+  gap: 12px;
+  margin-bottom: 16px;
+}
+
+.issue-item.critical {
+  background: #fee2e2;
+  padding: 12px;
+  border-radius: 6px;
+  border-left: 4px solid #dc2626;
+}
+
+.issue-item.warning {
+  background: #fef3c7;
+  padding: 12px;
+  border-radius: 6px;
+  border-left: 4px solid #f59e0b;
+}
+
+.issue-icon {
+  font-size: 20px;
+  line-height: 1;
+}
+
+.issue-content strong {
+  display: block;
+  margin-bottom: 4px;
+  color: #1f2937;
+  font-size: 14px;
+}
+
+.issue-content p {
+  margin: 0;
+  color: #4b5563;
+  font-size: 13px;
+  line-height: 1.5;
+}
+
+.diagnosis-actions {
+  text-align: center;
+  margin-top: 16px;
+}
+
+/* Solutions Step */
+.solution-list {
+  display: flex;
+  flex-direction: column;
+  gap: 16px;
+}
+
+.solution-item {
+  background: #f9fafb;
+  border: 1px solid #e5e7eb;
+  border-radius: 8px;
+  padding: 16px;
+}
+
+.solution-item.critical {
+  background: #fef2f2;
+  border-color: #fecaca;
+  border-left: 4px solid #dc2626;
+}
+
+.solution-item h4 {
+  margin: 0 0 8px 0;
+  color: #1f2937;
+  font-size: 14px;
+  font-weight: 600;
+}
+
+.solution-item p {
+  margin: 0 0 8px 0;
+  color: #4b5563;
+  font-size: 13px;
+  line-height: 1.5;
+}
+
+.solution-item ul {
+  margin: 0;
+  padding-left: 16px;
+  color: #4b5563;
+  font-size: 13px;
+}
+
+.solution-item li {
+  margin-bottom: 4px;
+  line-height: 1.4;
+}
+
+.quick-actions {
+  display: flex;
+  gap: 8px;
+  margin-top: 12px;
+  flex-wrap: wrap;
+}
+
+.solution-button {
+  padding: 8px 16px;
+  border: none;
+  border-radius: 6px;
+  font-size: 12px;
+  font-weight: 500;
+  cursor: pointer;
+  transition: all 0.2s;
+}
+
+.solution-button.primary {
+  background: #3b82f6;
+  color: white;
+}
+
+.solution-button.primary:hover {
+  background: #2563eb;
+}
+
+.solution-button.secondary {
+  background: #e5e7eb;
+  color: #374151;
+}
+
+.solution-button.secondary:hover {
+  background: #d1d5db;
+}
+
+/* Configuration Step */
+.config-form {
+  display: flex;
+  flex-direction: column;
+  gap: 16px;
+}
+
+.form-group {
+  display: flex;
+  flex-direction: column;
+  gap: 4px;
+}
+
+.form-group label {
+  font-weight: 500;
+  color: #374151;
+  font-size: 13px;
+}
+
+.form-input, .form-textarea {
+  padding: 8px 12px;
+  border: 1px solid #d1d5db;
+  border-radius: 6px;
+  font-size: 13px;
+  color: #1f2937;
+  transition: border-color 0.2s;
+}
+
+.form-input:focus, .form-textarea:focus {
+  outline: none;
+  border-color: #3b82f6;
+  box-shadow: 0 0 0 3px rgba(59, 130, 246, 0.1);
+}
+
+.form-group small {
+  color: #6b7280;
+  font-size: 11px;
+}
+
+.config-actions {
+  display: flex;
+  gap: 12px;
+  margin-top: 16px;
+}
+
+/* Buttons */
+.primary-button, .secondary-button {
+  padding: 10px 20px;
+  border: none;
+  border-radius: 6px;
+  font-size: 13px;
+  font-weight: 500;
+  cursor: pointer;
+  transition: all 0.2s;
+}
+
+.primary-button {
+  background: #3b82f6;
+  color: white;
+}
+
+.primary-button:hover:not(:disabled) {
+  background: #2563eb;
+}
+
+.primary-button:disabled {
+  background: #9ca3af;
+  cursor: not-allowed;
+}
+
+.secondary-button {
+  background: #f3f4f6;
+  color: #374151;
+  border: 1px solid #d1d5db;
+}
+
+.secondary-button:hover {
+  background: #e5e7eb;
+}
+
+/* Footer */
+.recovery-footer {
+  padding: 16px 24px;
+  background: #f8fafc;
+  border-radius: 0 0 16px 16px;
+  border-top: 1px solid #e2e8f0;
+}
+
+.recovery-footer p {
+  margin: 0;
+  font-size: 12px;
+  color: #6b7280;
+  line-height: 1.5;
+}
+
+/* Responsive Design */
+@media (max-width: 768px) {
+  .queryuser-error-recovery {
+    width: 95%;
+    max-height: 90vh;
+  }
+
+  .recovery-header {
+    padding: 16px 20px;
+  }
+
+  .recovery-header h2 {
+    font-size: 16px;
+  }
+
+  .recovery-progress {
+    padding: 12px 20px;
+    flex-wrap: wrap;
+    gap: 8px;
+  }
+
+  .progress-step {
+    padding: 6px 12px;
+    font-size: 12px;
+  }
+
+  .recovery-content {
+    padding: 20px;
+  }
+
+  .quick-actions {
+    flex-direction: column;
+  }
+
+  .config-actions {
+    flex-direction: column;
+  }
+}
+
+/* Dark mode support */
+@media (prefers-color-scheme: dark) {
+  .queryuser-error-recovery {
+    background: #1f2937;
+    color: #f9fafb;
+  }
+
+  .recovery-progress {
+    background: #374151;
+    border-bottom-color: #4b5563;
+  }
+
+  .recovery-step h3 {
+    color: #f3f4f6;
+  }
+
+  .diagnosis-result {
+    background: #450a0a;
+    border-color: #7f1d1d;
+  }
+
+  .issue-item.critical {
+    background: #7f1d1d;
+  }
+
+  .issue-item.warning {
+    background: #78350f;
+  }
+
+  .issue-content strong {
+    color: #f3f4f6;
+  }
+
+  .issue-content p {
+    color: #d1d5db;
+  }
+
+  .solution-item {
+    background: #374151;
+    border-color: #4b5563;
+  }
+
+  .solution-item.critical {
+    background: #450a0a;
+    border-color: #7f1d1d;
+  }
+
+  .solution-item h4 {
+    color: #f3f4f6;
+  }
+
+  .solution-item p, .solution-item li {
+    color: #d1d5db;
+  }
+
+  .form-input, .form-textarea {
+    background: #374151;
+    border-color: #4b5563;
+    color: #f9fafb;
+  }
+
+  .form-group label {
+    color: #f3f4f6;
+  }
+
+  .form-group small {
+    color: #9ca3af;
+  }
+
+  .secondary-button {
+    background: #4b5563;
+    color: #f3f4f6;
+    border-color: #6b7280;
+  }
+
+  .secondary-button:hover {
+    background: #6b7280;
+  }
+
+  .recovery-footer {
+    background: #374151;
+    border-top-color: #4b5563;
+  }
+
+  .recovery-footer p {
+    color: #9ca3af;
+  }
+}
